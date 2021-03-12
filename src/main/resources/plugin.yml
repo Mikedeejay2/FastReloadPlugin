@@ -1,0 +1,19 @@
+name: FastReload
+version: ${project.version}
+main: com.mikedeejay2.fastreload.FastReload
+api-version: 1.16
+authors: [ Mikedeejay2 ]
+description: World's fastest reload command. 
+
+commands:
+  fastreload:
+    description: World's fastest reload command
+    permission: fastreload
+    aliases:
+      - reload
+      - rl
+      - r
+
+permissions:
+  fastreload:
+    description: Permission for fast reloading
