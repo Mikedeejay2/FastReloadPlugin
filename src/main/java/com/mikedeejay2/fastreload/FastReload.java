@@ -1,5 +1,6 @@
 package com.mikedeejay2.fastreload;
 
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.permissions.Permission;
@@ -28,9 +29,11 @@ public final class FastReload extends JavaPlugin
         {
             player.sendMessage(ChatColor.RED + "You do not have permission to run this command.");
         }
-        player.sendMessage(ChatColor.YELLOW + "The server is reloading...");
-        this.getLogger().info(String.format("Player %s reloaded the server!", player.getName()));
-        this.getServer().reload();
-        player.sendMessage(ChatColor.GREEN + "The server has successfully reloaded.");
+        Bukkit.getScheduler().runTask(this, () -> {
+            player.sendMessage(ChatColor.YELLOW + "The server is reloading...");
+            this.getLogger().info(String.format("Player %s reloaded the server!", player.getName()));
+            this.getServer().reload();
+            player.sendMessage(ChatColor.GREEN + "The server has successfully reloaded.");
+        });
     }
 }
