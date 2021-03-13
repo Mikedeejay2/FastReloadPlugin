@@ -25,6 +25,7 @@ public class ChatListener implements Listener
             case "r":
             case "rl":
             case "reload":
+                event.setCancelled(true);
                 break;
             default:
                 return;
