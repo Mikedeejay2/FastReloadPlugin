@@ -65,7 +65,9 @@ public final class FastReload extends JavaPlugin
         sender.sendMessage(ChatColor.YELLOW + "The server is reloading...");
         long startTime = System.currentTimeMillis();
         this.getLogger().info(String.format("Player %s reloaded the server!", sender.getName()));
+
         this.getServer().reload();
+
         long endTime = System.currentTimeMillis();
         long differenceTime = endTime - startTime;
         sender.sendMessage(ChatColor.GREEN + "The server has successfully reloaded in " + differenceTime + "ms.");
@@ -75,6 +77,7 @@ public final class FastReload extends JavaPlugin
     {
         sender.sendMessage(ChatColor.YELLOW + "The server is reloading all plugins...");
         this.getLogger().info(String.format(ChatColor.RED + "Player %s reloaded the server's plugins!", sender.getName()));
+
         PluginManager pluginManager = Bukkit.getPluginManager();
         Server server = this.getServer();
 
