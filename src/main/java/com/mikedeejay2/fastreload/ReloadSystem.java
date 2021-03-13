@@ -24,6 +24,7 @@ import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Main reloading system class.
@@ -369,26 +370,20 @@ public class ReloadSystem {
      * This should be used when disabling a single plugin,
      * as {@link SimplePluginManager#disablePlugin(Plugin)} doesn't do this.
      *
-     * @param plugin The plugin to unregister commands from
+     * @param selectedPlugin The plugin to unregister commands from
      */
-    private void unregisterCommands(Plugin plugin) {
-        String fallbackPrefix = getFallback(plugin);
-        for(String name : plugin.getDescription().getCommands().keySet()) {
-            Command mainCmd = exposed.commandMap.getCommand(name);
-            if(mainCmd == null) continue;
-            List<String> aliases = mainCmd.getAliases();
-
-            mainCmd.unregister(exposed.commandMap);
-            exposed.knownCommands.remove(name);
-            exposed.knownCommands.remove(fallbackPrefix + ":" + name);
-
-            for(String alias : aliases) {
-                Command aliasCmd = exposed.commandMap.getCommand(alias);
-                if(aliasCmd == null) continue;
-                aliasCmd.unregister(exposed.commandMap);
-                exposed.knownCommands.remove(alias);
-                exposed.knownCommands.remove(fallbackPrefix + ":" + alias);
-            }
+    private void unregisterCommands(Plugin selectedPlugin) {
+        Set<Map.Entry<String, Command>> origSet = exposed.knownCommands.entrySet();
+        // This has to be essentially cloned, otherwise it throws a ConcurrentModificationException
+        Set<Map.Entry<String, Command>> set = new HashSet<>(origSet);
+        for(Map.Entry<String, Command> entry : set) {
+            Command command = entry.getValue();
+            String key = entry.getKey();
+            if(!(command instanceof PluginCommand)) continue;
+            PluginCommand pluginCommand = (PluginCommand) command;
+            Plugin owningPlugin = pluginCommand.getPlugin();
+            if(!selectedPlugin.getName().equals(owningPlugin.getName())) continue;
+            exposed.knownCommands.remove(key);
         }
     }
 
@@ -396,11 +391,11 @@ public class ReloadSystem {
      * Helper method to get the fallback string of a plugin.
      * This is used when getting some commands that are prefixed.
      *
-     * @param plugin The plugin to get the fallback string from
+     * @param selectedPlugin The plugin to get the fallback string from
      * @return The fallback string
      */
-    private String getFallback(Plugin plugin) {
-        String fallbackPrefix = plugin.getDescription().getName().toLowerCase(Locale.ENGLISH).trim();
+    private String getFallback(Plugin selectedPlugin) {
+        String fallbackPrefix = selectedPlugin.getDescription().getName().toLowerCase(Locale.ENGLISH).trim();
         return fallbackPrefix;
     }
 
