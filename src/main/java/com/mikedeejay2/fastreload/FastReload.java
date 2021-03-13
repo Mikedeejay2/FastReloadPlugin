@@ -41,4 +41,8 @@ public final class FastReload extends JavaPlugin {
         }
         return true;
     }
+
+    public ReloadSystem getReloadSystem() {
+        return reloadSystem;
+    }
 }

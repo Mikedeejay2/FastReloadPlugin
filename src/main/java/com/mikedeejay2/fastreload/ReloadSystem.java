@@ -104,12 +104,25 @@ public class ReloadSystem {
     /**
      * Full reload the server. This method doesn't do anything special, it just calls
      * {@link Server#reload()}.
+     * <p>
+     * If <tt>args</tt> is not empty, it will instead attempt to reload just the plugin
+     * specified.
+     * <p>
      * However, this method is only ran if "Only Plugins" in commands is set to false.
      *
      * @param sender The <tt>CommandSender</tt> requesting the reload
      * @param args   The String of arguments, possibly the name of the plugin, possibly null
      */
     private void reloadFull(final CommandSender sender, String[] args) {
+        if(args == null || args.length == 0) {
+            vanillaReload(sender);
+        } else {
+            reloadPlugin(sender, args);
+        }
+    }
+
+    private void vanillaReload(CommandSender sender)
+    {
         sender.sendMessage(ChatColor.YELLOW + "The server is reloading...");
         long startTime = System.currentTimeMillis();
         plugin.getLogger().info(String.format("Player %s reloaded the server!", sender.getName()));
