@@ -145,95 +145,6 @@ public class ReloadSystem
         plugin.getServer().getPluginManager().enablePlugin(plugin);
     }
 
-    private Plugin loadPlugin(String pluginName)
-    {
-        PluginManager manager = plugin.getServer().getPluginManager();
-        Server server = plugin.getServer();
-        File directory = new File("plugins");
-
-        Validate.notNull(directory, "Directory cannot be null");
-        Validate.isTrue(directory.isDirectory(), "Directory must be a directory");
-
-        Set<Pattern> filters = exposed.fileAssociations.keySet();
-
-        Map.Entry<String, File> plugins = null;
-
-        // This is where it figures out all possible plugins
-        PluginDescriptionFile description = null;
-
-        for (File file : directory.listFiles())
-        {
-            PluginLoader loader = null;
-            for (Pattern filter : filters)
-            {
-                Matcher match = filter.matcher(file.getName());
-                if (match.find())
-                {
-                    loader = exposed.fileAssociations.get(filter);
-                }
-            }
-
-            if (loader == null) continue;
-
-            PluginDescriptionFile curDescription = null;
-            try
-            {
-                curDescription = loader.getPluginDescription(file);
-            }
-            catch (InvalidDescriptionException ex)
-            {
-                server.getLogger().log(Level.SEVERE, "Could not load '" + file.getPath() + "' in folder '" + directory.getPath() + "'", ex);
-                continue;
-            }
-
-            if(pluginName.equals(curDescription.getName()))
-            {
-                plugins = new AbstractMap.SimpleEntry<>(curDescription.getName(), file);
-                description = curDescription;
-                break;
-            }
-        }
-
-        Collection<String> softDependencySet = description.getSoftDepend();
-        if (softDependencySet != null && !softDependencySet.isEmpty())
-        {
-            for (String depend : softDependencySet)
-            {
-                exposed.dependencyGraph.putEdge(description.getName(), depend);
-            }
-        }
-
-        Collection<String> dependencySet = description.getDepend();
-        if (dependencySet != null && !dependencySet.isEmpty())
-        {
-            for (String depend : dependencySet)
-            {
-                exposed.dependencyGraph.putEdge(description.getName(), depend);
-            }
-        }
-
-        Collection<String> loadBeforeSet = description.getLoadBefore();
-        if (loadBeforeSet != null && !loadBeforeSet.isEmpty())
-        {
-            for (String loadBeforeTarget : loadBeforeSet)
-            {
-                exposed.dependencyGraph.putEdge(loadBeforeTarget, description.getName());
-            }
-        }
-
-        File file = plugins.getValue();
-
-        try
-        {
-            return manager.loadPlugin(file);
-        }
-        catch (InvalidPluginException | InvalidDescriptionException ex)
-        {
-            server.getLogger().log(Level.SEVERE, "Could not load '" + file.getPath() + "' in folder '" + directory.getPath() + "'", ex);
-        }
-        return null;
-    }
-
     private void removePermissions()
     {
         List<Permission> permissions = plugin.getDescription().getPermissions();
@@ -343,5 +254,94 @@ public class ReloadSystem
                 exposed.knownCommands.remove(fallbackPrefix + ":" + alias);
             }
         }
+    }
+
+    private Plugin loadPlugin(String pluginName)
+    {
+        PluginManager manager = plugin.getServer().getPluginManager();
+        Server server = plugin.getServer();
+        File directory = new File("plugins");
+
+        Validate.notNull(directory, "Directory cannot be null");
+        Validate.isTrue(directory.isDirectory(), "Directory must be a directory");
+
+        Set<Pattern> filters = exposed.fileAssociations.keySet();
+
+        Map.Entry<String, File> plugins = null;
+
+        // This is where it figures out all possible plugins
+        PluginDescriptionFile description = null;
+
+        for (File file : directory.listFiles())
+        {
+            PluginLoader loader = null;
+            for (Pattern filter : filters)
+            {
+                Matcher match = filter.matcher(file.getName());
+                if (match.find())
+                {
+                    loader = exposed.fileAssociations.get(filter);
+                }
+            }
+
+            if (loader == null) continue;
+
+            PluginDescriptionFile curDescription = null;
+            try
+            {
+                curDescription = loader.getPluginDescription(file);
+            }
+            catch (InvalidDescriptionException ex)
+            {
+                server.getLogger().log(Level.SEVERE, "Could not load '" + file.getPath() + "' in folder '" + directory.getPath() + "'", ex);
+                continue;
+            }
+
+            if(pluginName.equals(curDescription.getName()))
+            {
+                plugins = new AbstractMap.SimpleEntry<>(curDescription.getName(), file);
+                description = curDescription;
+                break;
+            }
+        }
+
+        Collection<String> softDependencySet = description.getSoftDepend();
+        if (softDependencySet != null && !softDependencySet.isEmpty())
+        {
+            for (String depend : softDependencySet)
+            {
+                exposed.dependencyGraph.putEdge(description.getName(), depend);
+            }
+        }
+
+        Collection<String> dependencySet = description.getDepend();
+        if (dependencySet != null && !dependencySet.isEmpty())
+        {
+            for (String depend : dependencySet)
+            {
+                exposed.dependencyGraph.putEdge(description.getName(), depend);
+            }
+        }
+
+        Collection<String> loadBeforeSet = description.getLoadBefore();
+        if (loadBeforeSet != null && !loadBeforeSet.isEmpty())
+        {
+            for (String loadBeforeTarget : loadBeforeSet)
+            {
+                exposed.dependencyGraph.putEdge(loadBeforeTarget, description.getName());
+            }
+        }
+
+        File file = plugins.getValue();
+
+        try
+        {
+            return manager.loadPlugin(file);
+        }
+        catch (InvalidPluginException | InvalidDescriptionException ex)
+        {
+            server.getLogger().log(Level.SEVERE, "Could not load '" + file.getPath() + "' in folder '" + directory.getPath() + "'", ex);
+        }
+        return null;
     }
 }
