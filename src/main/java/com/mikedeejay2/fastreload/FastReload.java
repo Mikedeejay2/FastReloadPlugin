@@ -84,17 +84,18 @@ public final class FastReload extends JavaPlugin
         long startTime = System.currentTimeMillis();
 
         // Manual removal of plugin commands start
-        SimpleCommandMap commands = null;
-        Map<String, Command> knownCommands = null;
+        SimpleCommandMap commandMap;
+        Map<String, Command> knownCommands;
         try
         {
-            Method cmdMapMethod = server.getClass().getDeclaredMethod("getCommandMap");
-            commands = (SimpleCommandMap) cmdMapMethod.invoke(server);
+            Field commandMapField = server.getClass().getDeclaredField("commandMap");
+            commandMapField.setAccessible(true);
+            commandMap = (SimpleCommandMap) commandMapField.get(server);
             Field knownCmdsField = SimpleCommandMap.class.getDeclaredField("knownCommands");
             knownCmdsField.setAccessible(true);
-            knownCommands = (Map<String, Command>) knownCmdsField.get(commands);
+            knownCommands = (Map<String, Command>) knownCmdsField.get(commandMap);
         }
-        catch(NoSuchMethodException | IllegalAccessException | InvocationTargetException | NoSuchFieldException e)
+        catch(IllegalAccessException | NoSuchFieldException e)
         {
             e.printStackTrace();
             return;
@@ -105,19 +106,19 @@ public final class FastReload extends JavaPlugin
             String fallbackPrefix = plugin.getDescription().getName().toLowerCase(java.util.Locale.ENGLISH).trim();
             for(String name : plugin.getDescription().getCommands().keySet())
             {
-                Command mainCmd = commands.getCommand(name);
+                Command mainCmd = commandMap.getCommand(name);
                 if(mainCmd == null) continue;
                 List<String> aliases = mainCmd.getAliases();
 
-                mainCmd.unregister(commands);
+                mainCmd.unregister(commandMap);
                 knownCommands.remove(name);
                 knownCommands.remove(fallbackPrefix + ":" + name);
 
                 for(String alias : aliases)
                 {
-                    Command aliasCmd = commands.getCommand(alias);
+                    Command aliasCmd = commandMap.getCommand(alias);
                     if(aliasCmd == null) continue;
-                    aliasCmd.unregister(commands);
+                    aliasCmd.unregister(commandMap);
                     knownCommands.remove(alias);
                     knownCommands.remove(fallbackPrefix + ":" + alias);
                 }
