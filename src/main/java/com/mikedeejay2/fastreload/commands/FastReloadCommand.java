@@ -1,17 +1,18 @@
-package com.mikedeejay2.fastreload;
+package com.mikedeejay2.fastreload.commands;
 
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public class FastReloadCommand implements CommandExecutor
 {
-    private final Consumer<CommandSender> reloader;
+    private final BiConsumer<CommandSender, String[]> reloader;
 
-    public FastReloadCommand(Consumer<CommandSender> reloader)
+    public FastReloadCommand(BiConsumer<CommandSender, String[]> reloader)
     {
         this.reloader = reloader;
     }
@@ -24,7 +25,7 @@ public class FastReloadCommand implements CommandExecutor
             sender.sendMessage(ChatColor.RED + "Error: This command does not support arguments.");
             return false;
         }
-        reloader.accept(sender);
+        reloader.accept(sender, args);
         return true;
     }
 }

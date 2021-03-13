@@ -1,4 +1,4 @@
-package com.mikedeejay2.fastreload;
+package com.mikedeejay2.fastreload.listeners;
 
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -6,13 +6,14 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public class ChatListener implements Listener
 {
-    private final Consumer<CommandSender> reloader;
+    private final BiConsumer<CommandSender, String[]> reloader;
 
-    public ChatListener(final Consumer<CommandSender> reloader)
+    public ChatListener(final BiConsumer<CommandSender, String[]> reloader)
     {
         this.reloader = reloader;
     }
@@ -31,6 +32,6 @@ public class ChatListener implements Listener
                 return;
         }
         Player player = event.getPlayer();
-        reloader.accept(player);
+        reloader.accept(player, null);
     }
 }

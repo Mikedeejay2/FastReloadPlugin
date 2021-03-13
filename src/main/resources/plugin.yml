@@ -8,12 +8,12 @@ description: World's fastest reload command.
 commands:
   fastreload:
     description: World's fastest reload command
-    permission: fastreload
+    permission: fastreload.use
     aliases:
       - reload
       - rl
       - r
 
 permissions:
-  fastreload:
+  fastreload.use:
     description: Permission for fast reloading
