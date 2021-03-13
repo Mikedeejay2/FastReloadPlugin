@@ -7,7 +7,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 public class ChatListener implements Listener
 {

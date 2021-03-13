@@ -1,9 +1,7 @@
 package com.mikedeejay2.fastreload.commands;
 
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
 import org.bukkit.plugin.Plugin;
@@ -11,7 +9,6 @@ import org.bukkit.plugin.Plugin;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public class FastReloadCommand implements TabExecutor
