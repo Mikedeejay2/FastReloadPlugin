@@ -4,21 +4,27 @@ import com.mikedeejay2.fastreload.commands.FastReloadCommand;
 import com.mikedeejay2.fastreload.listeners.ChatListener;
 import com.mikedeejay2.fastreload.util.ExposedVariables;
 import com.mikedeejay2.fastreload.util.ReflectUtil;
+import org.apache.commons.lang.Validate;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Server;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.event.HandlerList;
 import org.bukkit.event.server.ServerLoadEvent;
-import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.PluginLoadOrder;
-import org.bukkit.plugin.PluginManager;
+import org.bukkit.permissions.Permission;
+import org.bukkit.plugin.*;
 
+import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.List;
+import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
+import java.util.logging.Level;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class ReloadSystem
 {
@@ -64,6 +70,18 @@ public class ReloadSystem
 
     private void reloadPlugins(final CommandSender sender, String[] args)
     {
+        if(args == null || args.length == 0)
+        {
+            reloadAllPlugins(sender);
+        }
+        else
+        {
+            reloadPlugin(sender, args);
+        }
+    }
+
+    private void reloadAllPlugins(final CommandSender sender)
+    {
         sender.sendMessage(ChatColor.YELLOW + "The server is reloading all plugins...");
         plugin.getLogger().info(String.format(ChatColor.RED + "Player %s reloaded the server's plugins!", sender.getName()));
 
@@ -90,6 +108,195 @@ public class ReloadSystem
         long endTime = System.currentTimeMillis();
         long differenceTime = endTime - startTime;
         sender.sendMessage(ChatColor.GREEN + "The server has successfully reloaded all plugins in " + differenceTime + "ms.");
+    }
+
+    private void reloadPlugin(final CommandSender sender, String[] args)
+    {
+        String pluginName = String.join(" ", args);
+        sender.sendMessage(ChatColor.YELLOW + String.format("The server is reloading plugin \"%s\"...", pluginName));
+        plugin.getLogger().info(String.format(ChatColor.RED + "Player %s reloaded the server's plugins!", sender.getName()));
+
+        PluginManager pluginManager = Bukkit.getPluginManager();
+        Plugin selectedPlugin = pluginManager.getPlugin(pluginName);
+
+        if(selectedPlugin == null)
+        {
+            sender.sendMessage(ChatColor.RED + String.format("The plugin \"%s\" is not a valid plugin.", pluginName));
+            return;
+        }
+
+        long startTime = System.currentTimeMillis();
+
+        disablePlugin(selectedPlugin);
+        removePlugin(selectedPlugin);
+        unregisterCommands(selectedPlugin);
+        removeLookups(selectedPlugin);
+        removeDependencyRefs(selectedPlugin);
+        removePermissions();
+        enablePlugin(selectedPlugin);
+
+        long endTime = System.currentTimeMillis();
+        long differenceTime = endTime - startTime;
+
+        sender.sendMessage(ChatColor.GREEN + String.format("The server has successfully reloaded plugin \"%s\" in %d ms.", pluginName, differenceTime));
+    }
+
+    private void enablePlugin(Plugin selectedPlugin)
+    {
+        Plugin plugin = loadPlugin(selectedPlugin.getDescription().getName());
+        plugin.getServer().getPluginManager().enablePlugin(plugin);
+    }
+
+    private Plugin loadPlugin(String pluginName)
+    {
+        PluginManager manager = plugin.getServer().getPluginManager();
+        Server server = plugin.getServer();
+        File directory = new File("plugins");
+
+        Validate.notNull(directory, "Directory cannot be null");
+        Validate.isTrue(directory.isDirectory(), "Directory must be a directory");
+
+        Set<Pattern> filters = exposed.fileAssociations.keySet();
+
+        Map.Entry<String, File> plugins = null;
+
+        // This is where it figures out all possible plugins
+        PluginDescriptionFile description = null;
+
+        for (File file : directory.listFiles())
+        {
+            PluginLoader loader = null;
+            for (Pattern filter : filters)
+            {
+                Matcher match = filter.matcher(file.getName());
+                if (match.find())
+                {
+                    loader = exposed.fileAssociations.get(filter);
+                }
+            }
+
+            if (loader == null) continue;
+
+            PluginDescriptionFile curDescription = null;
+            try
+            {
+                curDescription = loader.getPluginDescription(file);
+            }
+            catch (InvalidDescriptionException ex)
+            {
+                server.getLogger().log(Level.SEVERE, "Could not load '" + file.getPath() + "' in folder '" + directory.getPath() + "'", ex);
+                continue;
+            }
+
+            if(pluginName.equals(curDescription.getName()))
+            {
+                plugins = new AbstractMap.SimpleEntry<>(curDescription.getName(), file);
+                description = curDescription;
+                break;
+            }
+        }
+
+        Collection<String> softDependencySet = description.getSoftDepend();
+        if (softDependencySet != null && !softDependencySet.isEmpty())
+        {
+            for (String depend : softDependencySet)
+            {
+                exposed.dependencyGraph.putEdge(description.getName(), depend);
+            }
+        }
+
+        Collection<String> dependencySet = description.getDepend();
+        if (dependencySet != null && !dependencySet.isEmpty())
+        {
+            for (String depend : dependencySet)
+            {
+                exposed.dependencyGraph.putEdge(description.getName(), depend);
+            }
+        }
+
+        Collection<String> loadBeforeSet = description.getLoadBefore();
+        if (loadBeforeSet != null && !loadBeforeSet.isEmpty())
+        {
+            for (String loadBeforeTarget : loadBeforeSet)
+            {
+                exposed.dependencyGraph.putEdge(loadBeforeTarget, description.getName());
+            }
+        }
+
+        File file = plugins.getValue();
+
+        try
+        {
+            return manager.loadPlugin(file);
+        }
+        catch (InvalidPluginException | InvalidDescriptionException ex)
+        {
+            server.getLogger().log(Level.SEVERE, "Could not load '" + file.getPath() + "' in folder '" + directory.getPath() + "'", ex);
+        }
+        return null;
+    }
+
+    private void removePermissions()
+    {
+        List<Permission> permissions = plugin.getDescription().getPermissions();
+
+        PluginManager manager = plugin.getServer().getPluginManager();
+        for(Permission permission : permissions)
+        {
+            manager.removePermission(permission);
+            exposed.defaultPerms.get(true).remove(permission);
+            exposed.defaultPerms.get(false).remove(permission);
+        }
+    }
+
+    private void disablePlugin(Plugin selectedPlugin)
+    {
+        plugin.getServer().getPluginManager().disablePlugin(selectedPlugin);
+    }
+
+    private void removeDependencyRefs(Plugin selectedPlugin)
+    {
+        PluginDescriptionFile description = selectedPlugin.getDescription();
+        Collection<String> softDependencySet = description.getSoftDepend();
+        if (!softDependencySet.isEmpty())
+        {
+            for (String depend : softDependencySet)
+            {
+                exposed.dependencyGraph.removeEdge(description.getName(), depend);
+            }
+        }
+
+        Collection<String> dependencySet = description.getDepend();
+        if (!dependencySet.isEmpty())
+        {
+            for (String depend : dependencySet)
+            {
+                exposed.dependencyGraph.removeEdge(description.getName(), depend);
+            }
+        }
+
+        Collection<String> loadBeforeSet = description.getLoadBefore();
+        if (!loadBeforeSet.isEmpty())
+        {
+            for (String loadBeforeTarget : loadBeforeSet)
+            {
+                exposed.dependencyGraph.removeEdge(loadBeforeTarget, description.getName());
+            }
+        }
+    }
+
+    private void removeLookups(Plugin selectedPlugin)
+    {
+        exposed.lookupNames.remove(selectedPlugin.getDescription().getName().toLowerCase());
+        for (String provided : selectedPlugin.getDescription().getProvides())
+        {
+            exposed.lookupNames.remove(provided.toLowerCase());
+        }
+    }
+
+    private void removePlugin(Plugin selectedPlugin)
+    {
+        exposed.plugins.remove(selectedPlugin);
     }
 
     private void callReloadEvent()

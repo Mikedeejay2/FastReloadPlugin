@@ -20,11 +20,6 @@ public class FastReloadCommand implements CommandExecutor
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args)
     {
-        if(args.length > 0)
-        {
-            sender.sendMessage(ChatColor.RED + "Error: This command does not support arguments.");
-            return false;
-        }
         reloader.accept(sender, args);
         return true;
     }
