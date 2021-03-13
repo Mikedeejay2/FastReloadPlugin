@@ -127,10 +127,9 @@ public final class FastReload extends JavaPlugin
 
         try
         {
-
-            Method reloadMethod = server.getClass().getDeclaredMethod("loadPlugins");
+            Method loadMethod = server.getClass().getDeclaredMethod("loadPlugins");
             Method enableMethod = server.getClass().getDeclaredMethod("enablePlugins", PluginLoadOrder.class);
-            reloadMethod.invoke(server);
+            loadMethod.invoke(server);
             enableMethod.invoke(server, PluginLoadOrder.STARTUP);
             enableMethod.invoke(server, PluginLoadOrder.POSTWORLD);
         }
