@@ -3,12 +3,14 @@ package com.mikedeejay2.fastreload;
 import com.mikedeejay2.fastreload.commands.FastReloadCommand;
 import com.mikedeejay2.fastreload.listeners.ChatListener;
 import com.mikedeejay2.fastreload.util.ExposedVariables;
+import com.mikedeejay2.fastreload.util.ReflectUtil;
 import org.apache.commons.lang.Validate;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Server;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.event.server.ServerLoadEvent;
 import org.bukkit.permissions.Permission;
 import org.bukkit.plugin.*;
@@ -22,7 +24,6 @@ import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 public class ReloadSystem
 {
@@ -30,6 +31,8 @@ public class ReloadSystem
     private ExposedVariables exposed;
     private BiConsumer<CommandSender, String[]> reloadConsumer;
     private Predicate<CommandSender> permissionPredicate;
+    private ChatListener chatListener;
+    private FastReloadCommand commandExecutor;
 
     public ReloadSystem(FastReload plugin)
     {
@@ -39,11 +42,38 @@ public class ReloadSystem
 
     protected void initialize()
     {
-        plugin.getServer().getPluginManager().registerEvents(new ChatListener(this::reload), plugin);
-        plugin.getCommand("fastreload").setExecutor(new FastReloadCommand(this::reload));
         this.exposed = new ExposedVariables(plugin.getServer());
+        this.chatListener = new ChatListener(this::reload);
+        this.commandExecutor = new FastReloadCommand(this::reload);
+        overrideCommands();
+        plugin.getServer().getPluginManager().registerEvents(chatListener, plugin);
+        plugin.getCommand("fastreload").setExecutor(commandExecutor);
+        plugin.getCommand("fastreload").setTabCompleter(commandExecutor);
         this.reloadConsumer = plugin.getConfig().getBoolean("Only Plugins") ? this::reloadPlugins : this::reloadFull;
         this.permissionPredicate = plugin::checkPermission;
+    }
+
+    private void overrideCommands()
+    {
+        String[] overrideCommands = {"reload", "rl", "r"};
+        for(String commandStr : overrideCommands)
+        {
+            exposed.knownCommands.remove(commandStr);
+            PluginCommand command;
+            try
+            {
+                command = ReflectUtil.construct(PluginCommand.class, PluginCommand.class, new Class[]{String.class, Plugin.class}, new Object[]{commandStr, plugin});
+            }
+            catch(InstantiationException | InvocationTargetException | NoSuchMethodException | IllegalAccessException e)
+            {
+                e.printStackTrace();
+                return;
+            }
+            command.setExecutor(commandExecutor);
+            command.setTabCompleter(commandExecutor);
+            exposed.knownCommands.put(commandStr, command);
+            exposed.knownCommands.put(getFallback(plugin) + ":" + commandStr, command);
+        }
     }
 
     public void reload(final CommandSender sender, String[] args)
@@ -234,7 +264,7 @@ public class ReloadSystem
 
     private void unregisterCommands(Plugin plugin)
     {
-        String fallbackPrefix = plugin.getDescription().getName().toLowerCase(java.util.Locale.ENGLISH).trim();
+        String fallbackPrefix = getFallback(plugin);
         for(String name : plugin.getDescription().getCommands().keySet())
         {
             Command mainCmd = exposed.commandMap.getCommand(name);
@@ -254,6 +284,12 @@ public class ReloadSystem
                 exposed.knownCommands.remove(fallbackPrefix + ":" + alias);
             }
         }
+    }
+
+    private String getFallback(Plugin plugin)
+    {
+        String fallbackPrefix = plugin.getDescription().getName().toLowerCase(Locale.ENGLISH).trim();
+        return fallbackPrefix;
     }
 
     private Plugin loadPlugin(String pluginName)

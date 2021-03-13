@@ -1,5 +1,6 @@
 package com.mikedeejay2.fastreload.util;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -32,5 +33,19 @@ public final class ReflectUtil
         Method method = fromClass.getDeclaredMethod(fieldName, parameterTypes);
         method.setAccessible(true);
         return method.invoke(fromObj, args);
+    }
+
+    public static <T> T construct(Class<?> fromClass, Class<T> toClass, Class<?>[] parameterTypes, Object[] args) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException
+    {
+        Constructor constructor = fromClass.getDeclaredConstructor(parameterTypes);
+        constructor.setAccessible(true);
+        return toClass.cast(constructor.newInstance(args));
+    }
+
+    public static Object construct(Class<?> fromClass, Class<?>[] parameterTypes, Object[] args) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException
+    {
+        Constructor constructor = fromClass.getDeclaredConstructor(parameterTypes);
+        constructor.setAccessible(true);
+        return constructor.newInstance(args);
     }
 }
