@@ -5,28 +5,37 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.permissions.Permission;
 import org.bukkit.plugin.java.JavaPlugin;
 
-public final class FastReload extends JavaPlugin
-{
+/**
+ * Fast Reload Plugin main class.
+ * <p>
+ * For system code go to {@link ReloadSystem}
+ *
+ * @author Mikedeejay2
+ */
+public final class FastReload extends JavaPlugin {
     public static final Permission RELOAD_PERMISSION = new Permission("fastreload.use");
     private ReloadSystem reloadSystem;
 
     @Override
-    public void onEnable()
-    {
+    public void onEnable() {
         this.saveDefaultConfig();
         this.reloadSystem = new ReloadSystem(this);
     }
 
     @Override
-    public void onDisable()
-    {
+    public void onDisable() {
 
     }
 
-    public boolean checkPermission(CommandSender sender)
-    {
-        if(!sender.hasPermission(FastReload.RELOAD_PERMISSION))
-        {
+    /**
+     * Check whether a player has the permission to use Fast Reload.
+     * If they don't then send a message saying that they don't have permission.
+     *
+     * @param sender The <tt>CommandSender</tt> to check
+     * @return True if the sender has the permission, false if not
+     */
+    public boolean checkPermission(CommandSender sender) {
+        if(!sender.hasPermission(FastReload.RELOAD_PERMISSION)) {
             sender.sendMessage(ChatColor.RED + "You do not have permission to run this command.");
             return false;
         }

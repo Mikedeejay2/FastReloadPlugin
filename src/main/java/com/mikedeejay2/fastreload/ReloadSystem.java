@@ -25,8 +25,14 @@ import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class ReloadSystem
-{
+/**
+ * Main reloading system class.
+ * <p>
+ * Algorithms here heavily utilize {@link ExposedVariables} and reflection.
+ *
+ * @author Mikedeejay2
+ */
+public class ReloadSystem {
     private final FastReload plugin;
     private ExposedVariables exposed;
     private BiConsumer<CommandSender, String[]> reloadConsumer;
@@ -34,14 +40,20 @@ public class ReloadSystem
     private ChatListener chatListener;
     private FastReloadCommand commandExecutor;
 
-    public ReloadSystem(FastReload plugin)
-    {
+    /**
+     * Construct a new reloading system
+     *
+     * @param plugin A reference to the <tt>FastReload</tt> plugin
+     */
+    public ReloadSystem(FastReload plugin) {
         this.plugin = plugin;
         initialize();
     }
 
-    protected void initialize()
-    {
+    /**
+     * Initialize commands, listeners, and variables.
+     */
+    protected void initialize() {
         this.exposed = new ExposedVariables(plugin.getServer());
         this.chatListener = new ChatListener(this::reload);
         this.commandExecutor = new FastReloadCommand(this::reload);
@@ -51,19 +63,21 @@ public class ReloadSystem
         this.permissionPredicate = plugin::checkPermission;
     }
 
-    private void loadCommands()
-    {
+    /**
+     * Load all of the reload commands directly into the <tt>knownCommands</tt> map
+     * in {@link org.bukkit.command.SimpleCommandMap}.
+     * <p>
+     * If a command already exists for a reload command, this will remove the existing
+     * command before injecting the new command into its place.
+     */
+    private void loadCommands() {
         String[] overrideCommands = {"reload", "rl", "r"};
-        for(String commandStr : overrideCommands)
-        {
+        for(String commandStr : overrideCommands) {
             exposed.knownCommands.remove(commandStr);
             PluginCommand command;
-            try
-            {
+            try {
                 command = ReflectUtil.construct(PluginCommand.class, PluginCommand.class, new Class[]{String.class, Plugin.class}, new Object[]{commandStr, plugin});
-            }
-            catch(InstantiationException | InvocationTargetException | NoSuchMethodException | IllegalAccessException e)
-            {
+            } catch(InstantiationException | InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
                 e.printStackTrace();
                 return;
             }
@@ -74,15 +88,28 @@ public class ReloadSystem
         }
     }
 
-    public void reload(final CommandSender sender, String[] args)
-    {
+    /**
+     * Submit a <tt>CommandSender</tt> request to reload the server, taking in arguments as
+     * well in case they were specifying a specific command.
+     *
+     * @param sender The <tt>CommandSender</tt> requesting the reload
+     * @param args   The String of arguments, possibly the name of the plugin, possibly null
+     */
+    public void reload(final CommandSender sender, String[] args) {
         if(!permissionPredicate.test(sender)) return;
         // Schedule task on sync because of Async chat event
         Bukkit.getScheduler().runTask(plugin, () -> reloadConsumer.accept(sender, args));
     }
 
-    private void reloadFull(final CommandSender sender, String[] args)
-    {
+    /**
+     * Full reload the server. This method doesn't do anything special, it just calls
+     * {@link Server#reload()}.
+     * However, this method is only ran if "Only Plugins" in commands is set to false.
+     *
+     * @param sender The <tt>CommandSender</tt> requesting the reload
+     * @param args   The String of arguments, possibly the name of the plugin, possibly null
+     */
+    private void reloadFull(final CommandSender sender, String[] args) {
         sender.sendMessage(ChatColor.YELLOW + "The server is reloading...");
         long startTime = System.currentTimeMillis();
         plugin.getLogger().info(String.format("Player %s reloaded the server!", sender.getName()));
@@ -94,20 +121,32 @@ public class ReloadSystem
         sender.sendMessage(ChatColor.GREEN + "The server has successfully reloaded in " + differenceTime + "ms.");
     }
 
-    private void reloadPlugins(final CommandSender sender, String[] args)
-    {
-        if(args == null || args.length == 0)
-        {
+    /**
+     * Reload specifically the plugins on the server.
+     * <p>
+     * If <tt>args</tt> is not empty, it will instead attempt to reload just the plugin
+     * specified.
+     *
+     * @param sender The <tt>CommandSender</tt> requesting the reload
+     * @param args   The String of arguments, possibly the name of the plugin, possibly null
+     */
+    private void reloadPlugins(final CommandSender sender, String[] args) {
+        if(args == null || args.length == 0) {
             reloadAllPlugins(sender);
-        }
-        else
-        {
+        } else {
             reloadPlugin(sender, args);
         }
     }
 
-    private void reloadAllPlugins(final CommandSender sender)
-    {
+    /**
+     * Reload all plugins on the server.
+     * <p>
+     * This does essentially just what {@link Bukkit#reload()} does but only reloading
+     * plugins and nothing else.
+     *
+     * @param sender The <tt>CommandSender</tt> requesting the reload
+     */
+    private void reloadAllPlugins(final CommandSender sender) {
         sender.sendMessage(ChatColor.YELLOW + "The server is reloading all plugins...");
         plugin.getLogger().info(String.format(ChatColor.RED + "Player %s reloaded the server's plugins!", sender.getName()));
 
@@ -117,8 +156,7 @@ public class ReloadSystem
         long startTime = System.currentTimeMillis();
 
         // Manual removal of plugin commands start
-        for(Plugin plugin : pluginManager.getPlugins())
-        {
+        for(Plugin plugin : pluginManager.getPlugins()) {
             unregisterCommands(plugin);
         }
         // Manual removal of plugin commands end
@@ -136,8 +174,19 @@ public class ReloadSystem
         sender.sendMessage(ChatColor.GREEN + "The server has successfully reloaded all plugins in " + differenceTime + "ms.");
     }
 
-    private void reloadPlugin(final CommandSender sender, String[] args)
-    {
+    /**
+     * Reload a single plugin specified in <tt>args</tt>.
+     * If <tt>args</tt> is not a plugin it will notify the sender and return.
+     * <p>
+     * This method might be the worst offender here to accessing private/protected variables
+     * in CraftBukkit code, as there is no singleton plugin unregister method anywhere.
+     * What that means is that this method utilizes methods which emulate the act of a single
+     * plugin being unregistered and reloaded.
+     *
+     * @param sender The <tt>CommandSender</tt> requesting the reload
+     * @param args   The String of arguments, possibly the name of the plugin, possibly null
+     */
+    private void reloadPlugin(final CommandSender sender, String[] args) {
         String pluginName = String.join(" ", args);
         sender.sendMessage(ChatColor.YELLOW + String.format("The server is reloading plugin \"%s\"...", pluginName));
         plugin.getLogger().info(String.format(ChatColor.RED + "Player %s reloaded the server's plugins!", sender.getName()));
@@ -145,8 +194,7 @@ public class ReloadSystem
         PluginManager pluginManager = Bukkit.getPluginManager();
         Plugin selectedPlugin = pluginManager.getPlugin(pluginName);
 
-        if(selectedPlugin == null)
-        {
+        if(selectedPlugin == null) {
             sender.sendMessage(ChatColor.RED + String.format("The plugin \"%s\" is not a valid plugin.", pluginName));
             return;
         }
@@ -158,7 +206,7 @@ public class ReloadSystem
         unregisterCommands(selectedPlugin);
         removeLookups(selectedPlugin);
         removeDependencyRefs(selectedPlugin);
-        removePermissions();
+        removePermissions(selectedPlugin);
         enablePlugin(selectedPlugin);
 
         long endTime = System.currentTimeMillis();
@@ -167,104 +215,152 @@ public class ReloadSystem
         sender.sendMessage(ChatColor.GREEN + String.format("The server has successfully reloaded plugin \"%s\" in %d ms.", pluginName, differenceTime));
     }
 
-    private void enablePlugin(Plugin selectedPlugin)
-    {
+    /**
+     * Enable a selected plugin. This method will find the given plugin on disk,
+     * load it as new, and then enable it on the server.
+     * <p>
+     * Note that the plugin should be fully disabled and completely removed from
+     * CraftBukkit before calling this method! If not, bad things will probably happen.
+     *
+     * @param selectedPlugin The plugin to load
+     */
+    private void enablePlugin(Plugin selectedPlugin) {
         Plugin plugin = loadPlugin(selectedPlugin.getDescription().getName());
         plugin.getServer().getPluginManager().enablePlugin(plugin);
     }
 
-    private void removePermissions()
-    {
-        List<Permission> permissions = plugin.getDescription().getPermissions();
+    /**
+     * Remove all permissions from a plugin. This should be used when disabling a single
+     * plugin, as {@link SimplePluginManager#disablePlugin(Plugin)} doesn't do this.
+     */
+    private void removePermissions(Plugin selectedPlugin) {
+        List<Permission> permissions = selectedPlugin.getDescription().getPermissions();
 
         PluginManager manager = plugin.getServer().getPluginManager();
-        for(Permission permission : permissions)
-        {
+        for(Permission permission : permissions) {
             manager.removePermission(permission);
             exposed.defaultPerms.get(true).remove(permission);
             exposed.defaultPerms.get(false).remove(permission);
         }
     }
 
-    private void disablePlugin(Plugin selectedPlugin)
-    {
+    /**
+     * Helper method to disable a plugin using {@link SimplePluginManager#disablePlugin(Plugin)}.
+     * This method DOES NOT fully unregister the plugin!
+     *
+     * @param selectedPlugin The plugin to disable
+     */
+    private void disablePlugin(Plugin selectedPlugin) {
         plugin.getServer().getPluginManager().disablePlugin(selectedPlugin);
     }
 
-    private void removeDependencyRefs(Plugin selectedPlugin)
-    {
+    /**
+     * Remove dependency references of the plugin. This removes all dependencies
+     * from the dependency graph in {@link SimplePluginManager}.
+     * <p>
+     * This should be used when disabling a single plugin,
+     * as {@link SimplePluginManager#disablePlugin(Plugin)} doesn't do this.
+     *
+     * @param selectedPlugin The plugin to remove dependency references from
+     */
+    private void removeDependencyRefs(Plugin selectedPlugin) {
         PluginDescriptionFile description = selectedPlugin.getDescription();
         Collection<String> softDependencySet = description.getSoftDepend();
-        if (!softDependencySet.isEmpty())
-        {
-            for (String depend : softDependencySet)
-            {
+        if (!softDependencySet.isEmpty()) {
+            for (String depend : softDependencySet) {
                 exposed.dependencyGraph.removeEdge(description.getName(), depend);
             }
         }
 
         Collection<String> dependencySet = description.getDepend();
-        if (!dependencySet.isEmpty())
-        {
-            for (String depend : dependencySet)
-            {
+        if (!dependencySet.isEmpty()) {
+            for (String depend : dependencySet) {
                 exposed.dependencyGraph.removeEdge(description.getName(), depend);
             }
         }
 
         Collection<String> loadBeforeSet = description.getLoadBefore();
-        if (!loadBeforeSet.isEmpty())
-        {
-            for (String loadBeforeTarget : loadBeforeSet)
-            {
+        if (!loadBeforeSet.isEmpty()) {
+            for (String loadBeforeTarget : loadBeforeSet) {
                 exposed.dependencyGraph.removeEdge(loadBeforeTarget, description.getName());
             }
         }
     }
 
-    private void removeLookups(Plugin selectedPlugin)
-    {
+    /**
+     * Remove lookup names for a plugin. This removes all lookup names
+     * from {@link SimplePluginManager}
+     * <p>
+     * This should be used when disabling a single plugin,
+     * as {@link SimplePluginManager#disablePlugin(Plugin)} doesn't do this.
+     *
+     * @param selectedPlugin The plugin to remove lookups to
+     */
+    private void removeLookups(Plugin selectedPlugin) {
         exposed.lookupNames.remove(selectedPlugin.getDescription().getName().toLowerCase());
-        for (String provided : selectedPlugin.getDescription().getProvides())
-        {
+        for (String provided : selectedPlugin.getDescription().getProvides()) {
             exposed.lookupNames.remove(provided.toLowerCase());
         }
     }
 
-    private void removePlugin(Plugin selectedPlugin)
-    {
+    /**
+     * Remove a plugin from {@link SimplePluginManager}.
+     * <p>
+     * This should be used when disabling a single plugin,
+     * as {@link SimplePluginManager#disablePlugin(Plugin)} doesn't do this.
+     *
+     * @param selectedPlugin The plugin to be removed
+     */
+    private void removePlugin(Plugin selectedPlugin) {
         exposed.plugins.remove(selectedPlugin);
     }
 
-    private void callReloadEvent()
-    {
+    /**
+     * Call the {@link ServerLoadEvent} to the server in the edge case that a plugin
+     * uses the reload event to do something.
+     */
+    private void callReloadEvent() {
         plugin.getServer().getPluginManager().callEvent(new ServerLoadEvent(ServerLoadEvent.LoadType.RELOAD));
     }
 
-    private boolean loadPlugins(Server server)
-    {
-        try
-        {
-            // Not using ReflectUtils here since it's maybe a few ms faster because of double invoking
+    /**
+     * Load all plugins into the server. This method uses reflection to call a method in
+     * <tt>CraftServer</tt> to load all plugins and enable them.
+     *
+     * @param server A reference to the server
+     * @return Whether the plugins loading was successful
+     */
+    private boolean loadPlugins(Server server) {
+        try {
+            // Not using ReflectUtils here since it's maybe a ms faster because of double invoking
             Method loadMethod = server.getClass().getDeclaredMethod("loadPlugins");
             Method enableMethod = server.getClass().getDeclaredMethod("enablePlugins", PluginLoadOrder.class);
             loadMethod.invoke(server);
             enableMethod.invoke(server, PluginLoadOrder.STARTUP);
             enableMethod.invoke(server, PluginLoadOrder.POSTWORLD);
-        }
-        catch(NoSuchMethodException | IllegalAccessException | InvocationTargetException e)
-        {
+        } catch(NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
             e.printStackTrace();
             return true;
         }
         return false;
     }
 
-    private void unregisterCommands(Plugin plugin)
-    {
+    /**
+     * Unregister all commands registered by a plugin.
+     * This method does give the honor system to the plugin in question,
+     * as even if the plugin had attempted to initialize a plugin at the start
+     * but failed this method will still unregister the command that was specified
+     * anyways. That means that the next time that the plugin loads up it will have
+     * priority over the command.
+     * <p>
+     * This should be used when disabling a single plugin,
+     * as {@link SimplePluginManager#disablePlugin(Plugin)} doesn't do this.
+     *
+     * @param plugin The plugin to unregister commands from
+     */
+    private void unregisterCommands(Plugin plugin) {
         String fallbackPrefix = getFallback(plugin);
-        for(String name : plugin.getDescription().getCommands().keySet())
-        {
+        for(String name : plugin.getDescription().getCommands().keySet()) {
             Command mainCmd = exposed.commandMap.getCommand(name);
             if(mainCmd == null) continue;
             List<String> aliases = mainCmd.getAliases();
@@ -273,8 +369,7 @@ public class ReloadSystem
             exposed.knownCommands.remove(name);
             exposed.knownCommands.remove(fallbackPrefix + ":" + name);
 
-            for(String alias : aliases)
-            {
+            for(String alias : aliases) {
                 Command aliasCmd = exposed.commandMap.getCommand(alias);
                 if(aliasCmd == null) continue;
                 aliasCmd.unregister(exposed.commandMap);
@@ -284,14 +379,27 @@ public class ReloadSystem
         }
     }
 
-    private String getFallback(Plugin plugin)
-    {
+    /**
+     * Helper method to get the fallback string of a plugin.
+     * This is used when getting some commands that are prefixed.
+     *
+     * @param plugin The plugin to get the fallback string from
+     * @return The fallback string
+     */
+    private String getFallback(Plugin plugin) {
         String fallbackPrefix = plugin.getDescription().getName().toLowerCase(Locale.ENGLISH).trim();
         return fallbackPrefix;
     }
 
-    private Plugin loadPlugin(String pluginName)
-    {
+    /**
+     * Load a plugin from the file system. This method loads a plugin from new by
+     * iterating through the plugins folder and reading the name of the plugin until
+     * it reaches a plugin with the specified name.
+     *
+     * @param pluginName The name of the plugin to be loaded
+     * @return The loaded plugin, null if not found
+     */
+    private Plugin loadPlugin(String pluginName) {
         PluginManager manager = plugin.getServer().getPluginManager();
         Server server = plugin.getServer();
         File directory = new File("plugins");
@@ -306,14 +414,11 @@ public class ReloadSystem
         // This is where it figures out all possible plugins
         PluginDescriptionFile description = null;
 
-        for (File file : directory.listFiles())
-        {
+        for (File file : directory.listFiles()) {
             PluginLoader loader = null;
-            for (Pattern filter : filters)
-            {
+            for (Pattern filter : filters) {
                 Matcher match = filter.matcher(file.getName());
-                if (match.find())
-                {
+                if (match.find()) {
                     loader = exposed.fileAssociations.get(filter);
                 }
             }
@@ -321,18 +426,15 @@ public class ReloadSystem
             if (loader == null) continue;
 
             PluginDescriptionFile curDescription = null;
-            try
-            {
+            try {
                 curDescription = loader.getPluginDescription(file);
             }
-            catch (InvalidDescriptionException ex)
-            {
+            catch (InvalidDescriptionException ex) {
                 server.getLogger().log(Level.SEVERE, "Could not load '" + file.getPath() + "' in folder '" + directory.getPath() + "'", ex);
                 continue;
             }
 
-            if(pluginName.equals(curDescription.getName()))
-            {
+            if(pluginName.equals(curDescription.getName())) {
                 plugins = new AbstractMap.SimpleEntry<>(curDescription.getName(), file);
                 description = curDescription;
                 break;
@@ -340,40 +442,31 @@ public class ReloadSystem
         }
 
         Collection<String> softDependencySet = description.getSoftDepend();
-        if (softDependencySet != null && !softDependencySet.isEmpty())
-        {
-            for (String depend : softDependencySet)
-            {
+        if (softDependencySet != null && !softDependencySet.isEmpty()) {
+            for (String depend : softDependencySet) {
                 exposed.dependencyGraph.putEdge(description.getName(), depend);
             }
         }
 
         Collection<String> dependencySet = description.getDepend();
-        if (dependencySet != null && !dependencySet.isEmpty())
-        {
-            for (String depend : dependencySet)
-            {
+        if (dependencySet != null && !dependencySet.isEmpty()) {
+            for (String depend : dependencySet) {
                 exposed.dependencyGraph.putEdge(description.getName(), depend);
             }
         }
 
         Collection<String> loadBeforeSet = description.getLoadBefore();
-        if (loadBeforeSet != null && !loadBeforeSet.isEmpty())
-        {
-            for (String loadBeforeTarget : loadBeforeSet)
-            {
+        if (loadBeforeSet != null && !loadBeforeSet.isEmpty()) {
+            for (String loadBeforeTarget : loadBeforeSet) {
                 exposed.dependencyGraph.putEdge(loadBeforeTarget, description.getName());
             }
         }
 
         File file = plugins.getValue();
 
-        try
-        {
+        try {
             return manager.loadPlugin(file);
-        }
-        catch (InvalidPluginException | InvalidDescriptionException ex)
-        {
+        } catch (InvalidPluginException | InvalidDescriptionException ex) {
             server.getLogger().log(Level.SEVERE, "Could not load '" + file.getPath() + "' in folder '" + directory.getPath() + "'", ex);
         }
         return null;

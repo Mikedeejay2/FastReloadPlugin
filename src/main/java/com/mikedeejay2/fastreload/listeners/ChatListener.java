@@ -8,20 +8,22 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
 
 import java.util.function.BiConsumer;
 
-public class ChatListener implements Listener
-{
+/**
+ * Chat event listener for using fast reload operations without the
+ * use of commands.
+ *
+ * @author Mikedeejay2
+ */
+public class ChatListener implements Listener {
     private final BiConsumer<CommandSender, String[]> reloader;
 
-    public ChatListener(final BiConsumer<CommandSender, String[]> reloader)
-    {
+    public ChatListener(final BiConsumer<CommandSender, String[]> reloader) {
         this.reloader = reloader;
     }
 
     @EventHandler
-    public void chatEvent(AsyncPlayerChatEvent event)
-    {
-        switch(event.getMessage())
-        {
+    public void chatEvent(AsyncPlayerChatEvent event) {
+        switch(event.getMessage()) {
             case "r":
             case "rl":
             case "reload":
