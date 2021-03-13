@@ -382,7 +382,7 @@ public class ReloadSystem {
             if(!(command instanceof PluginCommand)) continue;
             PluginCommand pluginCommand = (PluginCommand) command;
             Plugin owningPlugin = pluginCommand.getPlugin();
-            if(!selectedPlugin.getName().equals(owningPlugin.getName())) continue;
+            if(selectedPlugin != owningPlugin) continue;
             if(pluginCommand.isRegistered()) {
                 pluginCommand.unregister(exposed.commandMap);
             }
