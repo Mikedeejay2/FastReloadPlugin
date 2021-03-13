@@ -45,15 +45,13 @@ public class ReloadSystem
         this.exposed = new ExposedVariables(plugin.getServer());
         this.chatListener = new ChatListener(this::reload);
         this.commandExecutor = new FastReloadCommand(this::reload);
-        overrideCommands();
+        loadCommands();
         plugin.getServer().getPluginManager().registerEvents(chatListener, plugin);
-        plugin.getCommand("fastreload").setExecutor(commandExecutor);
-        plugin.getCommand("fastreload").setTabCompleter(commandExecutor);
         this.reloadConsumer = plugin.getConfig().getBoolean("Only Plugins") ? this::reloadPlugins : this::reloadFull;
         this.permissionPredicate = plugin::checkPermission;
     }
 
-    private void overrideCommands()
+    private void loadCommands()
     {
         String[] overrideCommands = {"reload", "rl", "r"};
         for(String commandStr : overrideCommands)
