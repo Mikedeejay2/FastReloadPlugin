@@ -4,7 +4,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
-public class ReflectUtil
+public final class ReflectUtil
 {
     public static <T> T getField(String fieldName, Object fromObj, Class<?> fromClass, Class<T> toClass) throws NoSuchFieldException, IllegalAccessException
     {

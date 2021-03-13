@@ -13,7 +13,7 @@ import org.bukkit.plugin.SimplePluginManager;
 import java.util.*;
 import java.util.regex.Pattern;
 
-public class ExposedVariables
+public final class ExposedVariables
 {
     public final Map<Pattern, PluginLoader> fileAssociations;
     public final List<Plugin> plugins;
