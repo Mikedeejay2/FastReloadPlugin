@@ -77,12 +77,6 @@ public final class FastReload extends JavaPlugin
         this.getLogger().info(String.format(ChatColor.RED + "Player %s reloaded the server's plugins!", sender.getName()));
         PluginManager pluginManager = Bukkit.getPluginManager();
         Server server = this.getServer();
-        for(Plugin plugin : pluginManager.getPlugins())
-        {
-            String pluginName = plugin.getName();
-            pluginManager.disablePlugin(pluginManager.getPlugin(pluginName));
-            pluginManager.enablePlugin(pluginManager.getPlugin(pluginName));
-        }
 
         long startTime = System.currentTimeMillis();
 
