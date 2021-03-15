@@ -374,11 +374,8 @@ public class ReloadSystem {
      */
     private void unregisterCommands(Plugin selectedPlugin) {
         Set<Map.Entry<String, Command>> origSet = exposed.knownCommands.entrySet();
-        // This has to be essentially cloned, otherwise it throws a ConcurrentModificationException
-        Set<Map.Entry<String, Command>> set = new HashSet<>(origSet);
-        for(Map.Entry<String, Command> entry : set) {
-            Command command = entry.getValue();
-            String key = entry.getKey();
+        for(Iterator<Map.Entry<String, Command>> i = origSet.iterator(); i.hasNext();) {
+            Command command = i.next().getValue();
             if(!(command instanceof PluginCommand)) continue;
             PluginCommand pluginCommand = (PluginCommand) command;
             Plugin owningPlugin = pluginCommand.getPlugin();
@@ -386,7 +383,7 @@ public class ReloadSystem {
             if(pluginCommand.isRegistered()) {
                 pluginCommand.unregister(exposed.commandMap);
             }
-            exposed.knownCommands.remove(key);
+            i.remove();
         }
     }
 
