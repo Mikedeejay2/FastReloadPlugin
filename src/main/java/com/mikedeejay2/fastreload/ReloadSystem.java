@@ -219,7 +219,6 @@ public class ReloadSystem {
         removePlugin(selectedPlugin);
         unregisterCommands(selectedPlugin);
         removeLookups(selectedPlugin);
-        removeDependencyRefs(selectedPlugin);
         removePermissions(selectedPlugin);
         enablePlugin(selectedPlugin);
 
@@ -266,39 +265,6 @@ public class ReloadSystem {
      */
     private void disablePlugin(Plugin selectedPlugin) {
         plugin.getServer().getPluginManager().disablePlugin(selectedPlugin);
-    }
-
-    /**
-     * Remove dependency references of the plugin. This removes all dependencies
-     * from the dependency graph in {@link SimplePluginManager}.
-     * <p>
-     * This should be used when disabling a single plugin,
-     * as {@link SimplePluginManager#disablePlugin(Plugin)} doesn't do this.
-     *
-     * @param selectedPlugin The plugin to remove dependency references from
-     */
-    private void removeDependencyRefs(Plugin selectedPlugin) {
-        PluginDescriptionFile description = selectedPlugin.getDescription();
-        Collection<String> softDependencySet = description.getSoftDepend();
-        if (!softDependencySet.isEmpty()) {
-            for (String depend : softDependencySet) {
-                exposed.dependencyGraph.removeEdge(description.getName(), depend);
-            }
-        }
-
-        Collection<String> dependencySet = description.getDepend();
-        if (!dependencySet.isEmpty()) {
-            for (String depend : dependencySet) {
-                exposed.dependencyGraph.removeEdge(description.getName(), depend);
-            }
-        }
-
-        Collection<String> loadBeforeSet = description.getLoadBefore();
-        if (!loadBeforeSet.isEmpty()) {
-            for (String loadBeforeTarget : loadBeforeSet) {
-                exposed.dependencyGraph.removeEdge(loadBeforeTarget, description.getName());
-            }
-        }
     }
 
     /**
@@ -433,7 +399,7 @@ public class ReloadSystem {
 
             if (loader == null) continue;
 
-            PluginDescriptionFile curDescription = null;
+            PluginDescriptionFile curDescription;
             try {
                 curDescription = loader.getPluginDescription(file);
             }
@@ -446,27 +412,6 @@ public class ReloadSystem {
                 plugins = new AbstractMap.SimpleEntry<>(curDescription.getName(), file);
                 description = curDescription;
                 break;
-            }
-        }
-
-        Collection<String> softDependencySet = description.getSoftDepend();
-        if (softDependencySet != null && !softDependencySet.isEmpty()) {
-            for (String depend : softDependencySet) {
-                exposed.dependencyGraph.putEdge(description.getName(), depend);
-            }
-        }
-
-        Collection<String> dependencySet = description.getDepend();
-        if (dependencySet != null && !dependencySet.isEmpty()) {
-            for (String depend : dependencySet) {
-                exposed.dependencyGraph.putEdge(description.getName(), depend);
-            }
-        }
-
-        Collection<String> loadBeforeSet = description.getLoadBefore();
-        if (loadBeforeSet != null && !loadBeforeSet.isEmpty()) {
-            for (String loadBeforeTarget : loadBeforeSet) {
-                exposed.dependencyGraph.putEdge(loadBeforeTarget, description.getName());
             }
         }
 

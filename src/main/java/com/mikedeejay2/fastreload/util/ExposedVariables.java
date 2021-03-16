@@ -34,7 +34,6 @@ public final class ExposedVariables {
     public final Map<Pattern, PluginLoader> fileAssociations;
     public final List<Plugin> plugins;
     public final Map<String, Plugin> lookupNames;
-    public final MutableGraph<String> dependencyGraph;
     public final SimpleCommandMap commandMap;
     public final Map<String, Permission> permissions;
     public final Map<Boolean, Set<Permission>> defaultPerms;
@@ -45,7 +44,6 @@ public final class ExposedVariables {
         Map<Pattern, PluginLoader> fileAssociations = null;
         List<Plugin> plugins = null;
         Map<String, Plugin>lookupNames = null;
-        MutableGraph<String> dependencyGraph = null;
         SimpleCommandMap commandMap = null;
         Map<String, Permission> permissions = null;
         Map<Boolean, Set<Permission>> defaultPerms = null;
@@ -57,7 +55,6 @@ public final class ExposedVariables {
             fileAssociations = ReflectUtil.getField("fileAssociations", pluginManager, SimplePluginManager.class, Map.class);
             plugins = ReflectUtil.getField("plugins", pluginManager, SimplePluginManager.class, List.class);
             lookupNames = ReflectUtil.getField("lookupNames", pluginManager, SimplePluginManager.class, Map.class);
-            dependencyGraph = ReflectUtil.getField("dependencyGraph", pluginManager, SimplePluginManager.class, MutableGraph.class);
             commandMap = ReflectUtil.getField("commandMap", pluginManager, SimplePluginManager.class, SimpleCommandMap.class);
             permissions = ReflectUtil.getField("permissions", pluginManager, SimplePluginManager.class, Map.class);
             defaultPerms = ReflectUtil.getField("defaultPerms", pluginManager, SimplePluginManager.class, Map.class);
@@ -68,7 +65,6 @@ public final class ExposedVariables {
         this.fileAssociations = fileAssociations;
         this.plugins = plugins;
         this.lookupNames = lookupNames;
-        this.dependencyGraph = dependencyGraph;
         this.commandMap = commandMap;
         this.permissions = permissions;
         this.defaultPerms = defaultPerms;
