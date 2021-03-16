@@ -385,9 +385,6 @@ public class ReloadSystem {
 
         Map.Entry<String, File> plugins = null;
 
-        // This is where it figures out all possible plugins
-        PluginDescriptionFile description = null;
-
         for (File file : directory.listFiles()) {
             PluginLoader loader = null;
             for (Pattern filter : filters) {
@@ -410,7 +407,6 @@ public class ReloadSystem {
 
             if(pluginName.equals(curDescription.getName())) {
                 plugins = new AbstractMap.SimpleEntry<>(curDescription.getName(), file);
-                description = curDescription;
                 break;
             }
         }
