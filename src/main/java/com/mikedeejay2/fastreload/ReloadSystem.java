@@ -88,7 +88,6 @@ public class ReloadSystem {
             }
         } catch(NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
             e.printStackTrace();
-            return;
         }
     }
 
