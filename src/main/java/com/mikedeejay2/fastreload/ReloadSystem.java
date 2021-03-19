@@ -4,7 +4,6 @@ import com.mikedeejay2.fastreload.commands.FastReloadCommand;
 import com.mikedeejay2.fastreload.listeners.ChatListener;
 import com.mikedeejay2.fastreload.util.ExposedVariables;
 import com.mikedeejay2.fastreload.util.ReflectUtil;
-import org.apache.commons.lang.Validate;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Server;
@@ -16,6 +15,7 @@ import org.bukkit.permissions.Permission;
 import org.bukkit.plugin.*;
 
 import java.io.File;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
@@ -24,7 +24,6 @@ import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /**
  * Main reloading system class.
@@ -73,19 +72,23 @@ public class ReloadSystem {
      */
     private void loadCommands() {
         String[] overrideCommands = {"reload", "rl", "r"};
-        for(String commandStr : overrideCommands) {
-            exposed.knownCommands.remove(commandStr);
-            PluginCommand command;
-            try {
-                command = ReflectUtil.construct(PluginCommand.class, PluginCommand.class, new Class[]{String.class, Plugin.class}, new Object[]{commandStr, plugin});
-            } catch(InstantiationException | InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
-                e.printStackTrace();
-                return;
+        Constructor<PluginCommand> pluginConstructor;
+        try {
+            // Manually get constructor using reflection because the constructor will be used once per plugin
+            pluginConstructor = PluginCommand.class.getDeclaredConstructor(String.class, Plugin.class);
+            pluginConstructor.setAccessible(true);
+            for(String commandStr : overrideCommands) {
+                exposed.knownCommands.remove(commandStr);
+                PluginCommand command;
+                command = pluginConstructor.newInstance(commandStr, plugin);
+                command.setExecutor(commandExecutor);
+                command.setTabCompleter(commandExecutor);
+                exposed.knownCommands.put(commandStr, command);
+                exposed.knownCommands.put(getFallback(plugin) + ":" + commandStr, command);
             }
-            command.setExecutor(commandExecutor);
-            command.setTabCompleter(commandExecutor);
-            exposed.knownCommands.put(commandStr, command);
-            exposed.knownCommands.put(getFallback(plugin) + ":" + commandStr, command);
+        } catch(NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
+            e.printStackTrace();
+            return;
         }
     }
 
@@ -216,10 +219,10 @@ public class ReloadSystem {
         long startTime = System.currentTimeMillis();
 
         disablePlugin(selectedPlugin);
-        removePlugin(selectedPlugin);
+        unregisterPlugin(selectedPlugin);
         unregisterCommands(selectedPlugin);
-        removeLookups(selectedPlugin);
-        removePermissions(selectedPlugin);
+        unregisterLookups(selectedPlugin);
+        unregisterPermissions(selectedPlugin);
         enablePlugin(selectedPlugin);
 
         long endTime = System.currentTimeMillis();
@@ -246,7 +249,7 @@ public class ReloadSystem {
      * Remove all permissions from a plugin. This should be used when disabling a single
      * plugin, as {@link SimplePluginManager#disablePlugin(Plugin)} doesn't do this.
      */
-    private void removePermissions(Plugin selectedPlugin) {
+    private void unregisterPermissions(Plugin selectedPlugin) {
         List<Permission> permissions = selectedPlugin.getDescription().getPermissions();
 
         PluginManager manager = plugin.getServer().getPluginManager();
@@ -276,7 +279,7 @@ public class ReloadSystem {
      *
      * @param selectedPlugin The plugin to remove lookups to
      */
-    private void removeLookups(Plugin selectedPlugin) {
+    private void unregisterLookups(Plugin selectedPlugin) {
         exposed.lookupNames.remove(selectedPlugin.getDescription().getName().toLowerCase());
         for (String provided : selectedPlugin.getDescription().getProvides()) {
             exposed.lookupNames.remove(provided.toLowerCase());
@@ -291,7 +294,7 @@ public class ReloadSystem {
      *
      * @param selectedPlugin The plugin to be removed
      */
-    private void removePlugin(Plugin selectedPlugin) {
+    private void unregisterPlugin(Plugin selectedPlugin) {
         exposed.plugins.remove(selectedPlugin);
     }
 
@@ -361,8 +364,7 @@ public class ReloadSystem {
      * @return The fallback string
      */
     private String getFallback(Plugin selectedPlugin) {
-        String fallbackPrefix = selectedPlugin.getDescription().getName().toLowerCase(Locale.ENGLISH).trim();
-        return fallbackPrefix;
+        return selectedPlugin.getDescription().getName().toLowerCase(Locale.ENGLISH).trim();
     }
 
     /**
@@ -378,12 +380,9 @@ public class ReloadSystem {
         Server server = plugin.getServer();
         File directory = new File("plugins");
 
-        Validate.notNull(directory, "Directory cannot be null");
-        Validate.isTrue(directory.isDirectory(), "Directory must be a directory");
-
         Set<Pattern> filters = exposed.fileAssociations.keySet();
 
-        Map.Entry<String, File> plugins = null;
+        File pluginFile = null;
 
         for (File file : directory.listFiles()) {
             PluginLoader loader = null;
@@ -406,17 +405,15 @@ public class ReloadSystem {
             }
 
             if(pluginName.equals(curDescription.getName())) {
-                plugins = new AbstractMap.SimpleEntry<>(curDescription.getName(), file);
+                pluginFile = file;
                 break;
             }
         }
 
-        File file = plugins.getValue();
-
         try {
-            return manager.loadPlugin(file);
+            return manager.loadPlugin(pluginFile);
         } catch (InvalidPluginException | InvalidDescriptionException ex) {
-            server.getLogger().log(Level.SEVERE, "Could not load '" + file.getPath() + "' in folder '" + directory.getPath() + "'", ex);
+            server.getLogger().log(Level.SEVERE, "Could not load '" + pluginFile.getPath() + "' in folder '" + directory.getPath() + "'", ex);
         }
         return null;
     }
