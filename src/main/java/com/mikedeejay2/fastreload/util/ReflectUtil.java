@@ -106,7 +106,7 @@ public final class ReflectUtil
      */
     public static <T> T construct(Class<?> fromClass, Class<T> toClass, Class<?>[] parameterTypes, Object[] args)
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
-        Constructor constructor = fromClass.getDeclaredConstructor(parameterTypes);
+        Constructor<?> constructor = fromClass.getDeclaredConstructor(parameterTypes);
         constructor.setAccessible(true);
         return toClass.cast(constructor.newInstance(args));
     }
@@ -125,7 +125,7 @@ public final class ReflectUtil
      */
     public static Object construct(Class<?> fromClass, Class<?>[] parameterTypes, Object[] args)
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
-        Constructor constructor = fromClass.getDeclaredConstructor(parameterTypes);
+        Constructor<?> constructor = fromClass.getDeclaredConstructor(parameterTypes);
         constructor.setAccessible(true);
         return constructor.newInstance(args);
     }
