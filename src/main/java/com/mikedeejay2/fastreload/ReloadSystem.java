@@ -3,7 +3,6 @@ package com.mikedeejay2.fastreload;
 import com.mikedeejay2.fastreload.commands.FastReloadCommand;
 import com.mikedeejay2.fastreload.listeners.ChatListener;
 import com.mikedeejay2.fastreload.util.ExposedVariables;
-import com.mikedeejay2.fastreload.util.ReflectUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Server;
