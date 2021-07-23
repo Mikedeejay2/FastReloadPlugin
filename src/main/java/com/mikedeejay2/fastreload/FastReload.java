@@ -31,7 +31,7 @@ public final class FastReload extends JavaPlugin {
      * Check whether a player has the permission to use Fast Reload.
      * If they don't then send a message saying that they don't have permission.
      *
-     * @param sender The <tt>CommandSender</tt> to check
+     * @param sender The <code>CommandSender</code> to check
      * @return True if the sender has the permission, false if not
      */
     public boolean checkPermission(CommandSender sender) {

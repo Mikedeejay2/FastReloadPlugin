@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 
 /**
  * Fast reload command. Unlike normal commands, this command is force loaded
- * through reflection in {@link ReloadSystem}<tt>#loadCommands()</tt>.
+ * through reflection in {@link ReloadSystem}<code>#loadCommands()</code>.
  * This is due to the fact that this command is meant for a replacement for
  * Bukkit/Spigot/other reload commands implemented before this.
  *

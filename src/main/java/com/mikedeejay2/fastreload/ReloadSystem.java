@@ -42,7 +42,7 @@ public class ReloadSystem {
     /**
      * Construct a new reloading system
      *
-     * @param plugin A reference to the <tt>FastReload</tt> plugin
+     * @param plugin A reference to the <code>FastReload</code> plugin
      */
     public ReloadSystem(FastReload plugin) {
         this.plugin = plugin;
@@ -63,7 +63,7 @@ public class ReloadSystem {
     }
 
     /**
-     * Load all of the reload commands directly into the <tt>knownCommands</tt> map
+     * Load all of the reload commands directly into the <code>knownCommands</code> map
      * in {@link org.bukkit.command.SimpleCommandMap}.
      * <p>
      * If a command already exists for a reload command, this will remove the existing
@@ -91,10 +91,10 @@ public class ReloadSystem {
     }
 
     /**
-     * Submit a <tt>CommandSender</tt> request to reload the server, taking in arguments as
+     * Submit a <code>CommandSender</code> request to reload the server, taking in arguments as
      * well in case they were specifying a specific command.
      *
-     * @param sender The <tt>CommandSender</tt> requesting the reload
+     * @param sender The <code>CommandSender</code> requesting the reload
      * @param args   The String of arguments, possibly the name of the plugin, possibly null
      */
     public void reload(final CommandSender sender, String[] args) {
@@ -107,12 +107,12 @@ public class ReloadSystem {
      * Full reload the server. This method doesn't do anything special, it just calls
      * {@link Server#reload()}.
      * <p>
-     * If <tt>args</tt> is not empty, it will instead attempt to reload just the plugin
+     * If <code>args</code> is not empty, it will instead attempt to reload just the plugin
      * specified.
      * <p>
      * However, this method is only ran if "Only Plugins" in commands is set to false.
      *
-     * @param sender The <tt>CommandSender</tt> requesting the reload
+     * @param sender The <code>CommandSender</code> requesting the reload
      * @param args   The String of arguments, possibly the name of the plugin, possibly null
      */
     private void reloadFull(final CommandSender sender, String[] args) {
@@ -139,10 +139,10 @@ public class ReloadSystem {
     /**
      * Reload specifically the plugins on the server.
      * <p>
-     * If <tt>args</tt> is not empty, it will instead attempt to reload just the plugin
+     * If <code>args</code> is not empty, it will instead attempt to reload just the plugin
      * specified.
      *
-     * @param sender The <tt>CommandSender</tt> requesting the reload
+     * @param sender The <code>CommandSender</code> requesting the reload
      * @param args   The String of arguments, possibly the name of the plugin, possibly null
      */
     private void reloadPlugins(final CommandSender sender, String[] args) {
@@ -159,7 +159,7 @@ public class ReloadSystem {
      * This does essentially just what {@link Bukkit#reload()} does but only reloading
      * plugins and nothing else.
      *
-     * @param sender The <tt>CommandSender</tt> requesting the reload
+     * @param sender The <code>CommandSender</code> requesting the reload
      */
     private void reloadAllPlugins(final CommandSender sender) {
         sender.sendMessage(ChatColor.YELLOW + "The server is reloading all plugins...");
@@ -190,15 +190,15 @@ public class ReloadSystem {
     }
 
     /**
-     * Reload a single plugin specified in <tt>args</tt>.
-     * If <tt>args</tt> is not a plugin it will notify the sender and return.
+     * Reload a single plugin specified in <code>args</code>.
+     * If <code>args</code> is not a plugin it will notify the sender and return.
      * <p>
      * This method might be the worst offender here to accessing private/protected variables
      * in CraftBukkit code, as there is no singleton plugin unregister method anywhere.
      * What that means is that this method utilizes methods which emulate the act of a single
      * plugin being unregistered and reloaded.
      *
-     * @param sender The <tt>CommandSender</tt> requesting the reload
+     * @param sender The <code>CommandSender</code> requesting the reload
      * @param args   The String of arguments, possibly the name of the plugin, possibly null
      */
     private void reloadPlugin(final CommandSender sender, String[] args) {
@@ -306,7 +306,7 @@ public class ReloadSystem {
 
     /**
      * Load all plugins into the server. This method uses reflection to call a method in
-     * <tt>CraftServer</tt> to load all plugins and enable them.
+     * <code>CraftServer</code> to load all plugins and enable them.
      *
      * @param server A reference to the server
      * @return Whether the plugins loading was successful
