@@ -104,8 +104,8 @@ public class ReloadSystem {
     }
 
     /**
-     * Full reload the server. This method doesn't do anything special, it just calls
-     * {@link Server#reload()}.
+     * Full reload of the server using {@link ReloadSystem#vanillaReload(CommandSender)} unless a plugin name
+     * is detected.
      * <p>
      * If <code>args</code> is not empty, it will instead attempt to reload just the plugin
      * specified.
@@ -123,6 +123,14 @@ public class ReloadSystem {
         }
     }
 
+    /**
+     * Full reload the server. This method doesn't do anything special, it just calls
+     * {@link Server#reload()}.
+     * <p>
+     * However, this method is only ran if "Only Plugins" in commands is set to false.
+     *
+     * @param sender The <code>CommandSender</code> requesting the reload
+     */
     private void vanillaReload(CommandSender sender)
     {
         sender.sendMessage(ChatColor.YELLOW + "The server is reloading...");
