@@ -1,6 +1,7 @@
 package com.mikedeejay2.fastreload;
 
 import com.mikedeejay2.fastreload.commands.FastReloadCommand;
+import com.mikedeejay2.fastreload.config.FastReloadConfig;
 import com.mikedeejay2.fastreload.listeners.ChatListener;
 import com.mikedeejay2.fastreload.util.ExposedVariables;
 import org.bukkit.Bukkit;
@@ -20,6 +21,7 @@ import java.lang.reflect.Method;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -31,7 +33,7 @@ import java.util.regex.Pattern;
  *
  * @author Mikedeejay2
  */
-public class ReloadSystem {
+public class ReloadSystem implements FastReloadConfig.LoadListener {
     private final FastReload plugin;
     private ExposedVariables exposed;
     private BiConsumer<CommandSender, String[]> reloadConsumer;
@@ -46,7 +48,13 @@ public class ReloadSystem {
      */
     public ReloadSystem(FastReload plugin) {
         this.plugin = plugin;
+        this.plugin.config().registerListener(this);
         initialize();
+    }
+
+    @Override
+    public void onConfigLoad(FastReloadConfig config) {
+        this.reloadConsumer = config.ONLY_PLUGINS.get() ? this::reloadPlugins : this::reloadFull;
     }
 
     /**
@@ -56,10 +64,10 @@ public class ReloadSystem {
         this.exposed = new ExposedVariables(plugin.getServer());
         this.chatListener = new ChatListener(this::reload);
         this.commandExecutor = new FastReloadCommand(this::reload);
+        this.permissionPredicate = plugin::checkPermission;
         loadCommands();
         plugin.getServer().getPluginManager().registerEvents(chatListener, plugin);
-        this.reloadConsumer = plugin.getConfig().getBoolean("Only Plugins") ? this::reloadPlugins : this::reloadFull;
-        this.permissionPredicate = plugin::checkPermission;
+        this.reloadConsumer = null;
     }
 
     /**

@@ -1,1 +1,6 @@
 Only Plugins: true
+Auto Reload Plugins: true
+In Chat Reload: true
+Reload Filter Mode: Blacklist
+Filter List:
+  - FastReload
