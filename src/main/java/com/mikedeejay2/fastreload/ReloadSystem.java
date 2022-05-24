@@ -48,7 +48,6 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
      */
     public ReloadSystem(FastReload plugin) {
         this.plugin = plugin;
-        this.plugin.config().registerListener(this);
         initialize();
     }
 
@@ -68,6 +67,9 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
         loadCommands();
         plugin.getServer().getPluginManager().registerEvents(chatListener, plugin);
         this.reloadConsumer = null;
+
+        this.plugin.config().registerListener(this);
+        this.plugin.config().registerListener(chatListener);
     }
 
     /**

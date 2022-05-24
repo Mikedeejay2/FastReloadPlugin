@@ -1,5 +1,7 @@
 package com.mikedeejay2.fastreload.listeners;
 
+import com.mikedeejay2.fastreload.FastReload;
+import com.mikedeejay2.fastreload.config.FastReloadConfig;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -7,6 +9,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 
 import java.util.function.BiConsumer;
+import java.util.function.Supplier;
 
 /**
  * Chat event listener for using fast reload operations without the
@@ -14,8 +17,9 @@ import java.util.function.BiConsumer;
  *
  * @author Mikedeejay2
  */
-public class ChatListener implements Listener {
+public class ChatListener implements Listener, FastReloadConfig.LoadListener {
     private final BiConsumer<CommandSender, String[]> reloader;
+    private boolean shouldExecute;
 
     public ChatListener(final BiConsumer<CommandSender, String[]> reloader) {
         this.reloader = reloader;
@@ -23,6 +27,8 @@ public class ChatListener implements Listener {
 
     @EventHandler
     public void chatEvent(AsyncPlayerChatEvent event) {
+        Player player = event.getPlayer();
+        if(!shouldExecute || !player.hasPermission(FastReload.RELOAD_PERMISSION)) return;
         switch(event.getMessage()) {
             case "r":
             case "rl":
@@ -32,7 +38,11 @@ public class ChatListener implements Listener {
             default:
                 return;
         }
-        Player player = event.getPlayer();
         reloader.accept(player, null);
+    }
+
+    @Override
+    public void onConfigLoad(FastReloadConfig config) {
+        shouldExecute = config.IN_CHAT_RELOAD.get();
     }
 }
