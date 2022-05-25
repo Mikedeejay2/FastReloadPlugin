@@ -13,6 +13,7 @@ public class FastReloadConfig {
 
     public final ConfigVal<Boolean> ONLY_PLUGINS        = new ConfigVal<>(c -> c.getBoolean("Only Plugins"));
     public final ConfigVal<Boolean> AUTO_RELOAD_PLUGINS = new ConfigVal<>(c -> c.getBoolean("Auto Reload Plugins"));
+    public final ConfigVal<Integer> AUTO_RELOAD_TIME    = new ConfigVal<>(c -> c.getInt("Auto Reload Check Time"));
     public final ConfigVal<Boolean> IN_CHAT_RELOAD      = new ConfigVal<>(c -> c.getBoolean("In Chat Reload"));
     public final ConfigVal<String> FILTER_MODE          = new ConfigVal<>(c -> c.getString("Reload Filter Mode"));
     public final ConfigVal<List<String>> FILTER_LIST    = new ConfigVal<>(c -> c.getStringList("Filter List"));

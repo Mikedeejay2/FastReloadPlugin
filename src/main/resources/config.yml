@@ -1,6 +1,9 @@
 Only Plugins: true
-Auto Reload Plugins: true
 In Chat Reload: true
+
+Auto Reload Plugins: true
+Auto Reload Check Time: 20
+
 Reload Filter Mode: Blacklist
 Filter List:
   - FastReload
