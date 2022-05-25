@@ -24,6 +24,7 @@ import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Main reloading system class.
@@ -40,6 +41,9 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
     private ChatListener chatListener;
     private FastReloadCommand commandExecutor;
 
+    private List<String> pluginFilterList;
+    private boolean filterWhitelist;
+
     /**
      * Construct a new reloading system
      *
@@ -53,6 +57,9 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
     @Override
     public void onConfigLoad(FastReloadConfig config) {
         this.reloadConsumer = config.ONLY_PLUGINS.get() ? this::reloadPlugins : this::reloadFull;
+        this.pluginFilterList = config.FILTER_LIST.get()
+            .stream().map(String::toLowerCase).collect(Collectors.toList());
+        this.filterWhitelist = config.FILTER_MODE.get().equalsIgnoreCase("whitelist");
     }
 
     /**
@@ -183,23 +190,16 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
         plugin.getLogger().info(String.format(ChatColor.RED + "Player %s reloaded the server's plugins!", sender.getName()));
 
         PluginManager pluginManager = Bukkit.getPluginManager();
-        Server server = plugin.getServer();
 
         long startTime = System.currentTimeMillis();
 
-        // Manual removal of plugin commands start
-        for(Plugin plugin : pluginManager.getPlugins()) {
-            unregisterCommands(plugin);
+        // Reload all commands, take into account the black/whitelist filter in the config
+        for(Plugin curPlugin : pluginManager.getPlugins()) {
+            if(filterWhitelist ^ pluginFilterList.contains(curPlugin.getName().toLowerCase())) {
+                continue;
+            }
+            reloadPlugin(curPlugin);
         }
-        // Manual removal of plugin commands end
-
-        // Manual reload of plugins start
-        pluginManager.clearPlugins();
-        if(loadPlugins(server)) return;
-        // Manual reload of plugins end
-
-        // Call the server load event. Probably not required but there just in case a plugin uses for something.
-        callReloadEvent();
 
         long endTime = System.currentTimeMillis();
         long differenceTime = endTime - startTime;
@@ -233,17 +233,21 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
 
         long startTime = System.currentTimeMillis();
 
-        disablePlugin(selectedPlugin);
-        unregisterPlugin(selectedPlugin);
-        unregisterCommands(selectedPlugin);
-        unregisterLookups(selectedPlugin);
-        unregisterPermissions(selectedPlugin);
-        enablePlugin(selectedPlugin);
+        reloadPlugin(selectedPlugin);
 
         long endTime = System.currentTimeMillis();
         long differenceTime = endTime - startTime;
 
         sender.sendMessage(ChatColor.GREEN + String.format("The server has successfully reloaded plugin \"%s\" in %d ms.", pluginName, differenceTime));
+    }
+
+    private void reloadPlugin(Plugin thePlugin) {
+        disablePlugin(thePlugin);
+        unregisterPlugin(thePlugin);
+        unregisterCommands(thePlugin);
+        unregisterLookups(thePlugin);
+        unregisterPermissions(thePlugin);
+        enablePlugin(thePlugin);
     }
 
     /**
