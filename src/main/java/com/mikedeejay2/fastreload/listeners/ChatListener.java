@@ -9,7 +9,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 
 import java.util.function.BiConsumer;
-import java.util.function.Supplier;
 
 /**
  * Chat event listener for using fast reload operations without the
