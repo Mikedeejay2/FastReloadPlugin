@@ -521,9 +521,9 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
      */
     private class AutoReloaderRunnable implements Runnable {
         /**
-         * The list of last modified values. Key = File name, value = Time last modified (since last queried)
+         * The list of last modified values. Key = File, value = Time last modified (since last queried)
          */
-        private final Map<String, Long> lastModified = new HashMap<>();
+        private final Map<File, Long> lastModified = new HashMap<>();
 
         @Override
         public void run() {
@@ -539,17 +539,17 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
                 final String pluginName = description.getName();
 
                 // If map doesn't contain the key, add it to the map
-                if(!lastModified.containsKey(pluginName)) {
-                    lastModified.put(pluginName, modifiedDate);
+                if(!lastModified.containsKey(pluginFile)) {
+                    lastModified.put(pluginFile, modifiedDate);
                     // If the plugin is already loaded there's no need to load it again
                     if(pluginManager.isPluginEnabled(pluginName)) continue;
 
                     Bukkit.getScheduler().runTask(plugin, () -> autoLoadPlugin(pluginName));
-                } else if(lastModified.get(pluginName) != modifiedDate) { // If times don't match, reload
+                } else if(lastModified.get(pluginFile) != modifiedDate) { // If times don't match, reload
                     Plugin curPlugin = pluginManager.getPlugin(pluginName);
 
                     Bukkit.getScheduler().runTask(plugin, () -> autoReloadPlugin(pluginName, curPlugin));
-                    lastModified.put(pluginName, modifiedDate);
+                    lastModified.put(pluginFile, modifiedDate);
                 }
             }
         }
