@@ -1,5 +1,6 @@
 package com.mikedeejay2.fastreload;
 
+import com.mikedeejay2.fastreload.commands.ReloadConfig;
 import com.mikedeejay2.fastreload.config.FastReloadConfig;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
@@ -15,6 +16,7 @@ import org.bukkit.plugin.java.JavaPlugin;
  */
 public final class FastReload extends JavaPlugin {
     public static final Permission RELOAD_PERMISSION = new Permission("fastreload.use");
+    public static final Permission CONFIG_RELOAD_PERMISSION = new Permission("fastreload.reloadconfig");
     private ReloadSystem reloadSystem;
     private FastReloadConfig config;
 
@@ -24,6 +26,8 @@ public final class FastReload extends JavaPlugin {
         this.config = new FastReloadConfig(this.getConfig());
         this.reloadSystem = new ReloadSystem(this);
         this.config.loadConfig();
+
+        this.getCommand("fastreloadrc").setExecutor(new ReloadConfig(this));
     }
 
     @Override

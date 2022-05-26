@@ -13,6 +13,11 @@ commands:
       - reload
       - rl
       - r
+  fastreloadrc:
+    description: Config reload command for Fast Reload
+    permission: fastreload.reloadconfig
+    aliases:
+      - frrc
 
 permissions:
   fastreload.use:
