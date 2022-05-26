@@ -492,33 +492,37 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
                     lastModified.put(pluginName, modifiedDate);
                     if(pluginManager.isPluginEnabled(pluginName)) continue;
 
-                    Bukkit.getScheduler().runTask(plugin, () -> {
-                        serverSender.sendMessage(ChatColor.YELLOW + String.format("Found new plugin \"%s\", loading...", pluginName));
-                        long startTime = System.currentTimeMillis();
-
-                        loadAndEnablePlugin(pluginName);
-
-                        long endTime = System.currentTimeMillis();
-                        long differenceTime = endTime - startTime;
-                        serverSender.sendMessage(ChatColor.GREEN + String.format("The server has successfully loaded plugin \"%s\" in %d ms.", pluginName, differenceTime));
-                    });
+                    Bukkit.getScheduler().runTask(plugin, () -> autoLoadPlugin(pluginName));
                 } else if(lastModified.get(pluginName) != modifiedDate) {
                     Plugin curPlugin = pluginManager.getPlugin(pluginName);
 
-                    Bukkit.getScheduler().runTask(plugin, () -> {
-                        serverSender.sendMessage(ChatColor.YELLOW + String.format("Detected plugin \"%s\" has been updated, reloading...", pluginName));
-                        long startTime = System.currentTimeMillis();
-
-                        reloadPlugin(curPlugin);
-
-                        long endTime = System.currentTimeMillis();
-                        long differenceTime = endTime - startTime;
-
-                        serverSender.sendMessage(ChatColor.GREEN + String.format("The server has successfully reloaded plugin \"%s\" in %d ms.", pluginName, differenceTime));
-                    });
+                    Bukkit.getScheduler().runTask(plugin, () -> autoReloadPlugin(pluginName, curPlugin));
                     lastModified.put(pluginName, modifiedDate);
                 }
             }
+        }
+
+        private void autoLoadPlugin(String pluginName) {
+            serverSender.sendMessage(ChatColor.YELLOW + String.format("Found new plugin \"%s\", loading...", pluginName));
+            long startTime = System.currentTimeMillis();
+
+            loadAndEnablePlugin(pluginName);
+
+            long endTime = System.currentTimeMillis();
+            long differenceTime = endTime - startTime;
+            serverSender.sendMessage(ChatColor.GREEN + String.format("The server has successfully loaded plugin \"%s\" in %d ms.", pluginName, differenceTime));
+        }
+
+        private void autoReloadPlugin(String pluginName, Plugin curPlugin) {
+            serverSender.sendMessage(ChatColor.YELLOW + String.format("Detected plugin \"%s\" has been updated, reloading...", pluginName));
+            long startTime = System.currentTimeMillis();
+
+            reloadPlugin(curPlugin);
+
+            long endTime = System.currentTimeMillis();
+            long differenceTime = endTime - startTime;
+
+            serverSender.sendMessage(ChatColor.GREEN + String.format("The server has successfully reloaded plugin \"%s\" in %d ms.", pluginName, differenceTime));
         }
 
         private long getModifiedDate(File file) {
