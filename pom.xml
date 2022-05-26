@@ -18,6 +18,7 @@
     </properties>
 
     <build>
+        <finalName>${project.name}-${project.version}</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -30,7 +31,6 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
-                            <finalName>${project.name}-${project.version}</finalName>
                             <outputFile>${serverDirectory}</outputFile>
                         </configuration>
                     </execution>
