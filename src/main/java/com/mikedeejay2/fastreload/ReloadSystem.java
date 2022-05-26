@@ -76,6 +76,10 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
         }
     }
 
+    /**
+     * Command to disable all runnables in the reload system. Currently, this includes the automatic plugin reloader if
+     * it is enabled in the configuration file
+     */
     public void disable() {
         if(this.autoReloader != null) autoReloader.cancel();
         autoReloader = null;
@@ -260,11 +264,27 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
         sender.sendMessage(ChatColor.GREEN + String.format("The server has successfully reloaded plugin \"%s\" in %d ms.", pluginName, differenceTime));
     }
 
+    /**
+     * Reload a specified plugin. This method does the following in order
+     * <ol>
+     *     <li>Disable the plugin.</li>
+     *     <li>Unregister the plugin (commands, lookups, permissions)</li>
+     *     <li>Load the plugin from the file</li>
+     *     <li>Enable the plugin</li>
+     * </ol>
+     *
+     * @param thePlugin The plugin to reload
+     */
     private void reloadPlugin(Plugin thePlugin) {
         disableAndUnregisterPlugin(thePlugin);
         loadAndEnablePlugin(thePlugin.getName());
     }
 
+    /**
+     * Disable and unregister a specific plugin.
+     *
+     * @param thePlugin The plugin to disable
+     */
     private void disableAndUnregisterPlugin(Plugin thePlugin) {
         disablePlugin(thePlugin);
         unregisterPlugin(thePlugin);
@@ -431,6 +451,13 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
         return null;
     }
 
+    /**
+     * Get the file of an already loaded Plugin. This method iterates through all files in the plugins directory until
+     * it finds the jar file with the same name as the loaded plugin.
+     *
+     * @param pluginName The name of the plugin to find the file for
+     * @return The located file, null if none found
+     */
     private File getPluginFile(String pluginName) {
         for (File file : PLUGINS_DIRECTORY.listFiles()) {
             PluginDescriptionFile curDescription = getPluginDescription(file, true);
@@ -444,6 +471,13 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
         return null;
     }
 
+    /**
+     * Get the {@link PluginDescriptionFile} of a <code>File</code> representing a plugin jar file.
+     *
+     * @param pluginFile The plugin File to get the description from
+     * @param throwErrors Whether to throw errors or not
+     * @return The generated <code>PluginDescriptionFile</code>, null if error occurred
+     */
     private PluginDescriptionFile getPluginDescription(File pluginFile, boolean throwErrors) {
         PluginLoader loader = getPluginLoader(pluginFile);
         if (loader == null) return null;
@@ -462,6 +496,14 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
         return curDescription;
     }
 
+    /**
+     * Get the {@link PluginLoader} of a <code>File</code>. This method uses the same code from
+     * {@link SimplePluginManager} to obtain the correct loader from the internal list of file associations representing
+     * the different types of plugins that can be loaded.
+     *
+     * @param pluginFile The plugin file to get the <code>PluginLoader</code> for
+     * @return The located <code>PluginLoader</code>, null if not found
+     */
     private PluginLoader getPluginLoader(File pluginFile) {
         for (Pattern filter : exposed.fileAssociations.keySet()) {
             Matcher match = filter.matcher(pluginFile.getName());
@@ -472,7 +514,15 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
         return null;
     }
 
+    /**
+     * An internal runnable for checking plugin files for changes
+     *
+     * @author Mikedeejay2
+     */
     private class AutoReloaderRunnable implements Runnable {
+        /**
+         * The list of last modified values. Key = File name, value = Time last modified (since last queried)
+         */
         private final Map<String, Long> lastModified = new HashMap<>();
 
         @Override
@@ -488,12 +538,14 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
                 final long modifiedDate = getModifiedDate(pluginFile);
                 final String pluginName = description.getName();
 
+                // If map doesn't contain the key, add it to the map
                 if(!lastModified.containsKey(pluginName)) {
                     lastModified.put(pluginName, modifiedDate);
+                    // If the plugin is already loaded there's no need to load it again
                     if(pluginManager.isPluginEnabled(pluginName)) continue;
 
                     Bukkit.getScheduler().runTask(plugin, () -> autoLoadPlugin(pluginName));
-                } else if(lastModified.get(pluginName) != modifiedDate) {
+                } else if(lastModified.get(pluginName) != modifiedDate) { // If times don't match, reload
                     Plugin curPlugin = pluginManager.getPlugin(pluginName);
 
                     Bukkit.getScheduler().runTask(plugin, () -> autoReloadPlugin(pluginName, curPlugin));
@@ -502,6 +554,11 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
             }
         }
 
+        /**
+         * Method called when a plugin is loaded automatically
+         *
+         * @param pluginName The name of the plugin to be loaded
+         */
         private void autoLoadPlugin(String pluginName) {
             serverSender.sendMessage(ChatColor.YELLOW + String.format("Found new plugin \"%s\", loading...", pluginName));
             long startTime = System.currentTimeMillis();
@@ -513,6 +570,12 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
             serverSender.sendMessage(ChatColor.GREEN + String.format("The server has successfully loaded plugin \"%s\" in %d ms.", pluginName, differenceTime));
         }
 
+        /**
+         * Method called when a plugin is reloaded automatically
+         *
+         * @param pluginName The name of the plugin to be reloaded
+         * @param curPlugin The instance of the plugin to be reloaded
+         */
         private void autoReloadPlugin(String pluginName, Plugin curPlugin) {
             serverSender.sendMessage(ChatColor.YELLOW + String.format("Detected plugin \"%s\" has been updated, reloading...", pluginName));
             long startTime = System.currentTimeMillis();
@@ -525,6 +588,12 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
             serverSender.sendMessage(ChatColor.GREEN + String.format("The server has successfully reloaded plugin \"%s\" in %d ms.", pluginName, differenceTime));
         }
 
+        /**
+         * Get the last modified date of a <code>File</code>. This is returned as a long in milliseconds.
+         *
+         * @param file The file to check
+         * @return The retrieved last modified time long, -1 if error occurred
+         */
         private long getModifiedDate(File file) {
             try {
                 return Files.getLastModifiedTime(Paths.get(file.getPath())).toMillis();

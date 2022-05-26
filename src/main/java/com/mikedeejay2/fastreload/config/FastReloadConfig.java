@@ -6,6 +6,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
+/**
+ * Container class for holding values of Fast Reload's configuration.
+ *
+ * @author Mikedeejay2
+ */
 public class FastReloadConfig {
     private final FileConfiguration config;
     private final List<ConfigVal<?>> configValues = new ArrayList<>();

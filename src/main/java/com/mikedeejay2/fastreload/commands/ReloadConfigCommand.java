@@ -6,10 +6,15 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 
-public class ReloadConfig implements CommandExecutor {
+/**
+ * Command for reloading Fast Reload's configuration file.
+ *
+ * @author Mikedeejay2
+ */
+public class ReloadConfigCommand implements CommandExecutor {
     private final FastReload plugin;
 
-    public ReloadConfig(FastReload plugin) {
+    public ReloadConfigCommand(FastReload plugin) {
         this.plugin = plugin;
     }
 
