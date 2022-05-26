@@ -9,15 +9,20 @@ import org.bukkit.ChatColor;
 import org.bukkit.Server;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.event.server.ServerLoadEvent;
 import org.bukkit.permissions.Permission;
 import org.bukkit.plugin.*;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
@@ -34,15 +39,17 @@ import java.util.stream.Collectors;
  * @author Mikedeejay2
  */
 public class ReloadSystem implements FastReloadConfig.LoadListener {
+    public static final File PLUGINS_DIRECTORY = new File("plugins");
     private final FastReload plugin;
+    private final ConsoleCommandSender serverSender;
     private ExposedVariables exposed;
     private BiConsumer<CommandSender, String[]> reloadConsumer;
     private Predicate<CommandSender> permissionPredicate;
     private ChatListener chatListener;
     private FastReloadCommand commandExecutor;
-
     private List<String> pluginFilterList;
     private boolean filterWhitelist;
+    private BukkitTask autoReloader;
 
     /**
      * Construct a new reloading system
@@ -51,6 +58,7 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
      */
     public ReloadSystem(FastReload plugin) {
         this.plugin = plugin;
+        this.serverSender = plugin.getServer().getConsoleSender();
         initialize();
     }
 
@@ -60,6 +68,17 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
         this.pluginFilterList = config.FILTER_LIST.get()
             .stream().map(String::toLowerCase).collect(Collectors.toList());
         this.filterWhitelist = config.FILTER_MODE.get().equalsIgnoreCase("whitelist");
+
+        if(config.AUTO_RELOAD_PLUGINS.get()) {
+            if(this.autoReloader != null) autoReloader.cancel();
+            int autoReloadTime = config.AUTO_RELOAD_TIME.get();
+            this.autoReloader = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, new AutoReloaderRunnable(), autoReloadTime, autoReloadTime);
+        }
+    }
+
+    public void disable() {
+        if(this.autoReloader != null) autoReloader.cancel();
+        autoReloader = null;
     }
 
     /**
@@ -151,7 +170,7 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
     {
         sender.sendMessage(ChatColor.YELLOW + "The server is reloading...");
         long startTime = System.currentTimeMillis();
-        plugin.getLogger().info(String.format("Player %s reloaded the server!", sender.getName()));
+        serverSender.sendMessage(String.format("Player %s reloaded the server!", sender.getName()));
 
         plugin.getServer().reload();
 
@@ -187,7 +206,7 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
      */
     private void reloadAllPlugins(final CommandSender sender) {
         sender.sendMessage(ChatColor.YELLOW + "The server is reloading all plugins...");
-        plugin.getLogger().info(String.format(ChatColor.RED + "Player %s reloaded the server's plugins!", sender.getName()));
+        serverSender.sendMessage(String.format(ChatColor.RED + "Player %s reloaded the server's plugins!", sender.getName()));
 
         PluginManager pluginManager = Bukkit.getPluginManager();
 
@@ -221,7 +240,7 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
     private void reloadPlugin(final CommandSender sender, String[] args) {
         String pluginName = String.join(" ", args);
         sender.sendMessage(ChatColor.YELLOW + String.format("The server is reloading plugin \"%s\"...", pluginName));
-        plugin.getLogger().info(String.format(ChatColor.RED + "Player %s reloaded the server's plugins!", sender.getName()));
+        serverSender.sendMessage(String.format(ChatColor.RED + "Player %s reloaded the server's plugins!", sender.getName()));
 
         PluginManager pluginManager = Bukkit.getPluginManager();
         Plugin selectedPlugin = pluginManager.getPlugin(pluginName);
@@ -242,12 +261,16 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
     }
 
     private void reloadPlugin(Plugin thePlugin) {
+        disableAndUnregisterPlugin(thePlugin);
+        loadAndEnablePlugin(thePlugin.getName());
+    }
+
+    private void disableAndUnregisterPlugin(Plugin thePlugin) {
         disablePlugin(thePlugin);
         unregisterPlugin(thePlugin);
         unregisterCommands(thePlugin);
         unregisterLookups(thePlugin);
         unregisterPermissions(thePlugin);
-        enablePlugin(thePlugin);
     }
 
     /**
@@ -257,11 +280,12 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
      * Note that the plugin should be fully disabled and completely removed from
      * CraftBukkit before calling this method! If not, bad things will probably happen.
      *
-     * @param selectedPlugin The plugin to load
+     * @param pluginName The name of the plugin to load
      */
-    private void enablePlugin(Plugin selectedPlugin) {
-        Plugin plugin = loadPlugin(selectedPlugin.getDescription().getName());
-        plugin.getServer().getPluginManager().enablePlugin(plugin);
+    private void loadAndEnablePlugin(String pluginName) {
+        Plugin newPlugin = loadPlugin(pluginName);
+        if(newPlugin == null) return;
+        plugin.getServer().getPluginManager().enablePlugin(newPlugin);
     }
 
     /**
@@ -396,44 +420,114 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
      */
     private Plugin loadPlugin(String pluginName) {
         PluginManager manager = plugin.getServer().getPluginManager();
-        Server server = plugin.getServer();
-        File directory = new File("plugins");
 
-        Set<Pattern> filters = exposed.fileAssociations.keySet();
-
-        File pluginFile = null;
-
-        for (File file : directory.listFiles()) {
-            PluginLoader loader = null;
-            for (Pattern filter : filters) {
-                Matcher match = filter.matcher(file.getName());
-                if (match.find()) {
-                    loader = exposed.fileAssociations.get(filter);
-                }
-            }
-
-            if (loader == null) continue;
-
-            PluginDescriptionFile curDescription;
-            try {
-                curDescription = loader.getPluginDescription(file);
-            }
-            catch (InvalidDescriptionException ex) {
-                server.getLogger().log(Level.SEVERE, "Could not load '" + file.getPath() + "' in folder '" + directory.getPath() + "'", ex);
-                continue;
-            }
-
-            if(pluginName.equals(curDescription.getName())) {
-                pluginFile = file;
-                break;
-            }
-        }
+        File pluginFile = getPluginFile(pluginName);
 
         try {
             return manager.loadPlugin(pluginFile);
         } catch (InvalidPluginException | InvalidDescriptionException ex) {
-            server.getLogger().log(Level.SEVERE, "Could not load '" + pluginFile.getPath() + "' in folder '" + directory.getPath() + "'", ex);
+            plugin.getServer().getLogger().log(Level.SEVERE, "Could not load '" + pluginFile.getPath() + "' in folder '" + PLUGINS_DIRECTORY.getPath() + "'", ex);
         }
         return null;
+    }
+
+    private File getPluginFile(String pluginName) {
+        for (File file : PLUGINS_DIRECTORY.listFiles()) {
+            PluginDescriptionFile curDescription = getPluginDescription(file, true);
+            if(curDescription == null) continue;
+
+            if(pluginName.equals(curDescription.getName())) {
+                return file;
+            }
+        }
+
+        return null;
+    }
+
+    private PluginDescriptionFile getPluginDescription(File pluginFile, boolean throwErrors) {
+        PluginLoader loader = getPluginLoader(pluginFile);
+        if (loader == null) return null;
+
+        PluginDescriptionFile curDescription = null;
+        try {
+            curDescription = loader.getPluginDescription(pluginFile);
+        }
+        catch (InvalidDescriptionException ex) {
+            if(!throwErrors) return null;
+            plugin.getServer().getLogger().log(
+                Level.SEVERE,
+                String.format("Could not load '%s' in folder '%s'", pluginFile.getPath(), PLUGINS_DIRECTORY.getPath()),
+                ex);
+        }
+        return curDescription;
+    }
+
+    private PluginLoader getPluginLoader(File pluginFile) {
+        for (Pattern filter : exposed.fileAssociations.keySet()) {
+            Matcher match = filter.matcher(pluginFile.getName());
+            if (match.find()) {
+                return exposed.fileAssociations.get(filter);
+            }
+        }
+        return null;
+    }
+
+    private class AutoReloaderRunnable implements Runnable {
+        private final Map<String, Long> lastModified = new HashMap<>();
+
+        @Override
+        public void run() {
+            PluginManager pluginManager = Bukkit.getPluginManager();
+
+            for(File pluginFile : PLUGINS_DIRECTORY.listFiles()) {
+                if(getPluginLoader(pluginFile) == null) continue;
+                // If the file is currently being moved and is incomplete we do not want this to throw errors
+                // The file will be ready next time
+                final PluginDescriptionFile description = getPluginDescription(pluginFile, false);
+                if(description == null) continue;
+                final long modifiedDate = getModifiedDate(pluginFile);
+                final String pluginName = description.getName();
+
+                if(!lastModified.containsKey(pluginName)) {
+                    lastModified.put(pluginName, modifiedDate);
+                    if(pluginManager.isPluginEnabled(pluginName)) continue;
+
+                    Bukkit.getScheduler().runTask(plugin, () -> {
+                        serverSender.sendMessage(ChatColor.YELLOW + String.format("Found new plugin \"%s\", loading...", pluginName));
+                        long startTime = System.currentTimeMillis();
+
+                        loadAndEnablePlugin(pluginName);
+
+                        long endTime = System.currentTimeMillis();
+                        long differenceTime = endTime - startTime;
+                        serverSender.sendMessage(ChatColor.GREEN + String.format("The server has successfully loaded plugin \"%s\" in %d ms.", pluginName, differenceTime));
+                    });
+                } else if(lastModified.get(pluginName) != modifiedDate) {
+                    Plugin curPlugin = pluginManager.getPlugin(pluginName);
+
+                    Bukkit.getScheduler().runTask(plugin, () -> {
+                        serverSender.sendMessage(ChatColor.YELLOW + String.format("Detected plugin \"%s\" has been updated, reloading...", pluginName));
+                        long startTime = System.currentTimeMillis();
+
+                        reloadPlugin(curPlugin);
+
+                        long endTime = System.currentTimeMillis();
+                        long differenceTime = endTime - startTime;
+
+                        serverSender.sendMessage(ChatColor.GREEN + String.format("The server has successfully reloaded plugin \"%s\" in %d ms.", pluginName, differenceTime));
+                    });
+                    lastModified.put(pluginName, modifiedDate);
+                }
+            }
+        }
+
+        private long getModifiedDate(File file) {
+            try {
+                return Files.getLastModifiedTime(Paths.get(file.getPath())).toMillis();
+            } catch(IOException e) {
+                e.printStackTrace();
+                return -1;
+            }
+        }
     }
 }

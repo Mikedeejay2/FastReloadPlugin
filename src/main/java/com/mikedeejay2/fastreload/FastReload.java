@@ -28,7 +28,7 @@ public final class FastReload extends JavaPlugin {
 
     @Override
     public void onDisable() {
-
+        this.reloadSystem.disable();
     }
 
     /**
