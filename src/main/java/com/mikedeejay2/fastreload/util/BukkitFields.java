@@ -29,7 +29,7 @@ import java.util.regex.Pattern;
  *
  * @author Mikedeejay2
  */
-public final class ExposedVariables {
+public final class BukkitFields {
     public final Map<Pattern, PluginLoader> fileAssociations;
     public final List<Plugin> plugins;
     public final Map<String, Plugin> lookupNames;
@@ -39,10 +39,10 @@ public final class ExposedVariables {
     public final PluginManager pluginManager;
     public final Map<String, Command> knownCommands;
 
-    public ExposedVariables(Server server) {
+    public BukkitFields(Server server) {
         Map<Pattern, PluginLoader> fileAssociations = null;
         List<Plugin> plugins = null;
-        Map<String, Plugin>lookupNames = null;
+        Map<String, Plugin> lookupNames = null;
         SimpleCommandMap commandMap = null;
         Map<String, Permission> permissions = null;
         Map<Boolean, Set<Permission>> defaultPerms = null;

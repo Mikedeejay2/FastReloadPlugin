@@ -1,6 +1,6 @@
 package com.mikedeejay2.fastreload.commands;
 
-import com.mikedeejay2.fastreload.ReloadSystem;
+import com.mikedeejay2.fastreload.system.ReloadSystem;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
