@@ -1,23 +1,35 @@
 package com.mikedeejay2.fastreload.system;
 
+import com.google.common.io.Files;
 import com.mikedeejay2.fastreload.FastReload;
 import com.mikedeejay2.fastreload.commands.FastReloadCommand;
 import com.mikedeejay2.fastreload.config.FastReloadConfig;
 import com.mikedeejay2.fastreload.listeners.ChatListener;
 import com.mikedeejay2.fastreload.util.BukkitFields;
+import com.mikedeejay2.fastreload.util.FieldsBase;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Server;
+import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.event.server.ServerLoadEvent;
+import org.bukkit.permissions.Permission;
 import org.bukkit.plugin.*;
 import org.bukkit.scheduler.BukkitTask;
+import org.yaml.snakeyaml.error.YAMLException;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 
@@ -28,10 +40,11 @@ import java.util.stream.Collectors;
  *
  * @author Mikedeejay2
  */
-public abstract class ReloadSystem implements FastReloadConfig.LoadListener {
+public class ReloadSystem implements FastReloadConfig.LoadListener {
     public static final File PLUGINS_DIRECTORY = new File("plugins");
     protected final FastReload plugin;
     protected final ConsoleCommandSender serverSender;
+    protected final FieldsBase fields;
     protected BiConsumer<CommandSender, String[]> reloadConsumer;
     protected Predicate<CommandSender> permissionPredicate;
     protected ChatListener chatListener;
@@ -45,8 +58,9 @@ public abstract class ReloadSystem implements FastReloadConfig.LoadListener {
      *
      * @param plugin A reference to the <code>FastReload</code> plugin
      */
-    public ReloadSystem(FastReload plugin) {
+    public ReloadSystem(FastReload plugin, FieldsBase fields) {
         this.plugin = plugin;
+        this.fields = fields;
         this.serverSender = plugin.getServer().getConsoleSender();
         this.chatListener = new ChatListener(this::reload);
         this.commandExecutor = new FastReloadCommand(this::reload);
@@ -72,6 +86,33 @@ public abstract class ReloadSystem implements FastReloadConfig.LoadListener {
             this.autoReloader = Bukkit.getScheduler().runTaskTimerAsynchronously(
                 plugin, new AutoReloaderRunnable(plugin, this),
                 autoReloadTime, autoReloadTime);
+        }
+    }
+
+    /**
+     * Load all of the reload commands directly into the <code>knownCommands</code> map
+     * in {@link org.bukkit.command.SimpleCommandMap}.
+     * <p>
+     * If a command already exists for a reload command, this will remove the existing
+     * command before injecting the new command into its place.
+     */
+    protected void loadCommands() {
+        Constructor<PluginCommand> pluginConstructor;
+        try {
+            // Manually get constructor using reflection because the constructor will be used once per plugin
+            pluginConstructor = PluginCommand.class.getDeclaredConstructor(String.class, Plugin.class);
+            pluginConstructor.setAccessible(true);
+            for(String commandStr : FastReload.RELOAD_COMMANDS) {
+                fields.knownCommands().remove(commandStr);
+                PluginCommand command;
+                command = pluginConstructor.newInstance(commandStr, plugin);
+                command.setExecutor(commandExecutor);
+                command.setTabCompleter(commandExecutor);
+                fields.knownCommands().put(commandStr, command);
+                fields.knownCommands().put(getFallback(plugin) + ":" + commandStr, command);
+            }
+        } catch(NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
+            e.printStackTrace();
         }
     }
 
@@ -321,7 +362,7 @@ public abstract class ReloadSystem implements FastReloadConfig.LoadListener {
      * @return The located file, null if none found
      */
     protected File getPluginFile(String pluginName) {
-        for (File file : PLUGINS_DIRECTORY.listFiles()) {
+        for (File file : PLUGINS_DIRECTORY.listFiles(file -> file.isFile() && file.getName().endsWith(".jar"))) {
             PluginDescriptionFile curDescription = getPluginDescription(file, true);
             if(curDescription == null) continue;
 
@@ -334,19 +375,19 @@ public abstract class ReloadSystem implements FastReloadConfig.LoadListener {
     }
 
     /**
-     * Load all of the reload commands directly into the <code>knownCommands</code> map
-     * in {@link org.bukkit.command.SimpleCommandMap}.
-     * <p>
-     * If a command already exists for a reload command, this will remove the existing
-     * command before injecting the new command into its place.
-     */
-    protected abstract void loadCommands();
-
-    /**
      * Remove all permissions from a plugin. This should be used when disabling a single
      * plugin, as {@link SimplePluginManager#disablePlugin(Plugin)} doesn't do this.
      */
-    protected abstract void unregisterPermissions(Plugin selectedPlugin);
+    protected void unregisterPermissions(Plugin selectedPlugin) {
+        List<Permission> permissions = selectedPlugin.getDescription().getPermissions();
+
+        PluginManager manager = plugin.getServer().getPluginManager();
+        for(Permission permission : permissions) {
+            manager.removePermission(permission);
+            fields.defaultPerms().get(true).remove(permission);
+            fields.defaultPerms().get(false).remove(permission);
+        }
+    }
 
     /**
      * Remove lookup names for a plugin. This removes all lookup names
@@ -357,7 +398,12 @@ public abstract class ReloadSystem implements FastReloadConfig.LoadListener {
      *
      * @param selectedPlugin The plugin to remove lookups to
      */
-    protected abstract void unregisterLookups(Plugin selectedPlugin);
+    protected void unregisterLookups(Plugin selectedPlugin) {
+        fields.lookupNames().remove(selectedPlugin.getDescription().getName().toLowerCase());
+        for (String provided : selectedPlugin.getDescription().getProvides()) {
+            fields.lookupNames().remove(provided.toLowerCase());
+        }
+    }
 
     /**
      * Remove a plugin from {@link SimplePluginManager}.
@@ -367,7 +413,9 @@ public abstract class ReloadSystem implements FastReloadConfig.LoadListener {
      *
      * @param selectedPlugin The plugin to be removed
      */
-    protected abstract void unregisterPlugin(Plugin selectedPlugin);
+    protected void unregisterPlugin(Plugin selectedPlugin) {
+        fields.plugins().remove(selectedPlugin);
+    }
 
     /**
      * Unregister all commands registered by a plugin.
@@ -382,7 +430,20 @@ public abstract class ReloadSystem implements FastReloadConfig.LoadListener {
      *
      * @param selectedPlugin The plugin to unregister commands from
      */
-    protected abstract void unregisterCommands(Plugin selectedPlugin);
+    protected void unregisterCommands(Plugin selectedPlugin) {
+        Set<Map.Entry<String, Command>> origSet = fields.knownCommands().entrySet();
+        for(Iterator<Map.Entry<String, Command>> i = origSet.iterator(); i.hasNext();) {
+            Command command = i.next().getValue();
+            if(!(command instanceof PluginCommand)) continue;
+            PluginCommand pluginCommand = (PluginCommand) command;
+            Plugin owningPlugin = pluginCommand.getPlugin();
+            if(selectedPlugin != owningPlugin) continue;
+            if(pluginCommand.isRegistered()) {
+                pluginCommand.unregister(fields.commandMap());
+            }
+            i.remove();
+        }
+    }
 
     /**
      * Get the {@link PluginDescriptionFile} of a <code>File</code> representing a plugin jar file.
@@ -391,5 +452,29 @@ public abstract class ReloadSystem implements FastReloadConfig.LoadListener {
      * @param throwErrors Whether to throw errors or not
      * @return The generated <code>PluginDescriptionFile</code>, null if error occurred
      */
-    protected abstract PluginDescriptionFile getPluginDescription(File pluginFile, boolean throwErrors);
+    protected PluginDescriptionFile getPluginDescription(File pluginFile, boolean throwErrors) {
+        PluginDescriptionFile curDescription = null;
+        try(JarFile jarFile = new JarFile(pluginFile)) {
+            JarEntry entry = jarFile.getJarEntry("plugin.yml");
+            curDescription = createPluginDescription(jarFile, entry);
+        } catch (IOException | InvalidDescriptionException ex) {
+            if(!throwErrors) return null;
+            plugin.getServer().getLogger().log(
+                Level.SEVERE,
+                String.format("Could not load '%s' in folder '%s'", pluginFile.getPath(), PLUGINS_DIRECTORY.getPath()),
+                ex);
+        }
+        return curDescription;
+    }
+
+    public PluginDescriptionFile createPluginDescription(JarFile file, JarEntry config) throws InvalidDescriptionException {
+        PluginDescriptionFile descriptionFile;
+        try(InputStream inputStream = file.getInputStream(config)) {
+            descriptionFile = new PluginDescriptionFile(inputStream);
+        } catch(IOException | YAMLException ex) {
+            throw new InvalidDescriptionException(ex);
+        }
+
+        return descriptionFile;
+    }
 }

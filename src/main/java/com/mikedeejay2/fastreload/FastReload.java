@@ -2,8 +2,9 @@ package com.mikedeejay2.fastreload;
 
 import com.mikedeejay2.fastreload.commands.ReloadConfigCommand;
 import com.mikedeejay2.fastreload.config.FastReloadConfig;
-import com.mikedeejay2.fastreload.system.BukkitReloadSystem;
 import com.mikedeejay2.fastreload.system.ReloadSystem;
+import com.mikedeejay2.fastreload.util.BukkitFields;
+import com.mikedeejay2.fastreload.util.PaperFields;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.permissions.Permission;
@@ -19,6 +20,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 public final class FastReload extends JavaPlugin {
     public static final Permission RELOAD_PERMISSION = new Permission("fastreload.use");
     public static final Permission CONFIG_RELOAD_PERMISSION = new Permission("fastreload.reloadconfig");
+    public static final String[] RELOAD_COMMANDS = {"reload", "rl", "r"};
     private ReloadSystem reloadSystem;
     private FastReloadConfig config;
 
@@ -26,7 +28,8 @@ public final class FastReload extends JavaPlugin {
     public void onEnable() {
         this.saveDefaultConfig();
         this.config = new FastReloadConfig(this.getConfig());
-        this.reloadSystem = new BukkitReloadSystem(this);
+        this.reloadSystem = new ReloadSystem(
+            this, hasPaperPluginsSystem() ? new PaperFields(this.getServer()) : new BukkitFields(this.getServer()));
         this.config.loadConfig();
 
         this.getCommand("fastreloadrc").setExecutor(new ReloadConfigCommand(this));
@@ -50,6 +53,15 @@ public final class FastReload extends JavaPlugin {
             return false;
         }
         return true;
+    }
+
+    public boolean hasPaperPluginsSystem() {
+        try {
+            Class.forName("io.papermc.paper.plugin.manager.PaperPluginManagerImpl");
+            return true;
+        } catch(ClassNotFoundException e) {
+            return false;
+        }
     }
 
     public ReloadSystem getReloadSystem() {

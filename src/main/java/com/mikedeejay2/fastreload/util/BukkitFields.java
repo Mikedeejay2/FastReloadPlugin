@@ -29,16 +29,7 @@ import java.util.regex.Pattern;
  *
  * @author Mikedeejay2
  */
-public final class BukkitFields {
-    public final Map<Pattern, PluginLoader> fileAssociations;
-    public final List<Plugin> plugins;
-    public final Map<String, Plugin> lookupNames;
-    public final SimpleCommandMap commandMap;
-    public final Map<String, Permission> permissions;
-    public final Map<Boolean, Set<Permission>> defaultPerms;
-    public final PluginManager pluginManager;
-    public final Map<String, Command> knownCommands;
-
+public final class BukkitFields extends FieldsBase {
     public BukkitFields(Server server) {
         Map<Pattern, PluginLoader> fileAssociations = null;
         List<Plugin> plugins = null;
@@ -61,7 +52,6 @@ public final class BukkitFields {
         } catch(IllegalAccessException | NoSuchFieldException e) {
             e.printStackTrace();
         }
-        this.fileAssociations = fileAssociations;
         this.plugins = plugins;
         this.lookupNames = lookupNames;
         this.commandMap = commandMap;
