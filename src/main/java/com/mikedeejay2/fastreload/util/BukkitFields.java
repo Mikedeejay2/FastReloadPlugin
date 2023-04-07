@@ -13,19 +13,7 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 /**
- * Container class holding all private/protected variables from CraftBukkit
- * that need to be accessed for Fast Reload. These variables are accessed via
- * instance and therefore modifying them modifies the variables in CraftBukkit
- * too.
- * <p>
- * This class should only be constructed once upon a startup / reload as
- * there isn't any reason to do so any other time because it would waste performance
- * and CraftBukkit variable instances don't change throughout runtime.
- * <p>
- * This class simply acts as a law breaker to Java's protective rules so that
- * Fast Reload can actually inject itself into the code without the use of a Spigot
- * patch or similar. While it's not the most efficient or good practice
- * implementation it works just fine for what this plugin is aiming for.
+ * Bukkit implementation of {@link FieldsBase}.
  *
  * @author Mikedeejay2
  */

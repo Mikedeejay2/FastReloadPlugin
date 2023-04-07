@@ -10,6 +10,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Base class for holding fields from the server's plugin manager. Extending classes should set all fields.
+ * <p>
+ * FastReload uses these fields to manage plugins at a level below what is available through {@link PluginManager}.
+ *
+ * @see BukkitFields
+ * @see PaperFields
+ * @author Mikedeejay2
+ */
 public abstract class FieldsBase {
     protected List<Plugin> plugins;
     protected Map<String, Plugin> lookupNames;

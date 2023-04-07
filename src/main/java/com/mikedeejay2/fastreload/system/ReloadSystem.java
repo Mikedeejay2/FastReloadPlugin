@@ -1,6 +1,5 @@
 package com.mikedeejay2.fastreload.system;
 
-import com.google.common.io.Files;
 import com.mikedeejay2.fastreload.FastReload;
 import com.mikedeejay2.fastreload.commands.FastReloadCommand;
 import com.mikedeejay2.fastreload.config.FastReloadConfig;
@@ -36,7 +35,7 @@ import java.util.stream.Collectors;
 /**
  * Main reloading system class.
  * <p>
- * Algorithms here heavily utilize {@link BukkitFields} and reflection.
+ * Algorithms here heavily utilize {@link FieldsBase} and reflection.
  *
  * @author Mikedeejay2
  */
@@ -362,7 +361,7 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
      * @return The located file, null if none found
      */
     protected File getPluginFile(String pluginName) {
-        for (File file : PLUGINS_DIRECTORY.listFiles(file -> file.isFile() && file.getName().endsWith(".jar"))) {
+        for (File file : ReloadSystem.getPluginFiles()) {
             PluginDescriptionFile curDescription = getPluginDescription(file, true);
             if(curDescription == null) continue;
 
@@ -467,7 +466,16 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
         return curDescription;
     }
 
-    public PluginDescriptionFile createPluginDescription(JarFile file, JarEntry config) throws InvalidDescriptionException {
+    /**
+     * Create a {@link PluginDescriptionFile} from a provided {@link JarFile} and {@link JarEntry}.
+     *
+     * @param file The {@link JarFile} of the plugin.
+     * @param config The {@link JarEntry} of the <code>plugin.yml</code> contained within the {@link JarFile}. In most
+     *               cases this {@link JarEntry} should be the <code>plugin.yml</code>.
+     * @return The create {@link PluginDescriptionFile}
+     * @throws InvalidDescriptionException If the <code>plugin.yml</code> of the jar file is invalid.
+     */
+    protected PluginDescriptionFile createPluginDescription(JarFile file, JarEntry config) throws InvalidDescriptionException {
         PluginDescriptionFile descriptionFile;
         try(InputStream inputStream = file.getInputStream(config)) {
             descriptionFile = new PluginDescriptionFile(inputStream);
@@ -476,5 +484,14 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
         }
 
         return descriptionFile;
+    }
+
+    /**
+     * Get an array of all plugin files in the plugins directory.
+     *
+     * @return All plugin files
+     */
+    public static File[] getPluginFiles() {
+        return PLUGINS_DIRECTORY.listFiles(file -> file.isFile() && file.getName().endsWith(".jar"));
     }
 }

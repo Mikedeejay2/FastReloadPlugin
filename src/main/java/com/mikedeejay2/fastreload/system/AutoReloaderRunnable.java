@@ -41,7 +41,7 @@ public class AutoReloaderRunnable implements Runnable {
     public void run() {
         PluginManager pluginManager = Bukkit.getPluginManager();
 
-        for(File pluginFile : ReloadSystem.PLUGINS_DIRECTORY.listFiles(file -> file.isFile() && file.getName().endsWith(".jar"))) {
+        for(File pluginFile : ReloadSystem.getPluginFiles()) {
             // If the file is currently being moved and is incomplete we do not want this to throw errors
             // The file will be ready next time
             final PluginDescriptionFile description = system.getPluginDescription(pluginFile, false);

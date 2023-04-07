@@ -55,6 +55,12 @@ public final class FastReload extends JavaPlugin {
         return true;
     }
 
+    /**
+     * Check whether this server is using the Paper Plugins system.
+     *
+     * @return Whether the Paper Plugins manager was found.
+     * @see PaperFields
+     */
     public boolean hasPaperPluginsSystem() {
         try {
             Class.forName("io.papermc.paper.plugin.manager.PaperPluginManagerImpl");
