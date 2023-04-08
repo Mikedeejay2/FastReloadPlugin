@@ -4,7 +4,6 @@ import com.mikedeejay2.fastreload.FastReload;
 import com.mikedeejay2.fastreload.commands.FastReloadCommand;
 import com.mikedeejay2.fastreload.config.FastReloadConfig;
 import com.mikedeejay2.fastreload.listeners.ChatListener;
-import com.mikedeejay2.fastreload.util.BukkitFields;
 import com.mikedeejay2.fastreload.util.FieldsBase;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -34,8 +33,6 @@ import java.util.stream.Collectors;
 
 /**
  * Main reloading system class.
- * <p>
- * Algorithms here heavily utilize {@link FieldsBase} and reflection.
  *
  * @author Mikedeejay2
  */
@@ -311,14 +308,6 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
      */
     protected void disablePlugin(Plugin selectedPlugin) {
         plugin.getServer().getPluginManager().disablePlugin(selectedPlugin);
-    }
-
-    /**
-     * Call the {@link ServerLoadEvent} to the server in the edge case that a plugin
-     * uses the reload event to do something.
-     */
-    protected void callReloadEvent() {
-        plugin.getServer().getPluginManager().callEvent(new ServerLoadEvent(ServerLoadEvent.LoadType.RELOAD));
     }
 
     /**
