@@ -101,7 +101,7 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
             // Manually get constructor using reflection because the constructor will be used once per plugin
             pluginConstructor = PluginCommand.class.getDeclaredConstructor(String.class, Plugin.class);
             pluginConstructor.setAccessible(true);
-            for(String commandStr : FastReload.RELOAD_COMMANDS) {
+            for(String commandStr : new String[]{"reload", "rl", "r"}) {
                 fields.knownCommands().remove(commandStr);
                 PluginCommand command;
                 command = pluginConstructor.newInstance(commandStr, plugin);
