@@ -337,6 +337,8 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
             return manager.loadPlugin(pluginFile);
         } catch (InvalidPluginException | InvalidDescriptionException ex) {
             plugin.getServer().getLogger().log(Level.SEVERE, "Could not load '" + pluginFile.getPath() + "' in folder '" + PLUGINS_DIRECTORY.getPath() + "'", ex);
+        } catch(NoClassDefFoundError ignored) {
+            // ignored
         }
         return null;
     }
