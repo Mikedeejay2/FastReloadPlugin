@@ -38,7 +38,7 @@ public class FastReloadCommand implements TabExecutor {
         if(args.length != 1) return null;
         return Arrays.stream(Bukkit.getPluginManager().getPlugins())
             .map(Plugin::getName)
-            .filter(s -> s.startsWith(args[0]))
+            .filter(s -> s.toLowerCase().startsWith(args[0].toLowerCase()))
             .collect(Collectors.toList());
     }
 }
