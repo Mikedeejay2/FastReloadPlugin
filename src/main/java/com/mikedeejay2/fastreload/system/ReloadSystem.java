@@ -78,8 +78,9 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
         if(config.AUTO_RELOAD_PLUGINS.get()) {
             if(this.autoReloader != null) autoReloader.cancel();
             int autoReloadTime = config.AUTO_RELOAD_TIME.get();
+            double autoReloadWait = config.AUTO_RELOAD_WAIT.get();
             this.autoReloader = Bukkit.getScheduler().runTaskTimerAsynchronously(
-                plugin, new AutoReloaderRunnable(plugin, this),
+                plugin, new AutoReloaderRunnable(plugin, this, autoReloadWait),
                 autoReloadTime, autoReloadTime);
         }
     }

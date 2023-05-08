@@ -25,16 +25,18 @@ public class AutoReloaderRunnable implements Runnable {
     private final FastReload plugin;
     private final ReloadSystem system;
     private final ConsoleCommandSender serverSender;
+    private int msWait;
 
     /**
      * The list of last modified values. Key = File, value = Time last modified (since last queried)
      */
     private final Map<File, Long> lastModified = new HashMap<>();
 
-    public AutoReloaderRunnable(FastReload plugin, ReloadSystem system) {
+    public AutoReloaderRunnable(FastReload plugin, ReloadSystem system, double msWait) {
         this.plugin = plugin;
         this.system = system;
         this.serverSender = plugin.getServer().getConsoleSender();
+        this.msWait = (int) (msWait * 1000);
     }
 
     @Override
@@ -47,6 +49,7 @@ public class AutoReloaderRunnable implements Runnable {
             final PluginDescriptionFile description = system.getPluginDescription(pluginFile, false);
             if(description == null) continue;
             final long modifiedDate = getModifiedDate(pluginFile);
+            if(System.currentTimeMillis() - modifiedDate < msWait) return;
             final String pluginName = description.getName();
 
             // If map doesn't contain the key, add it to the map

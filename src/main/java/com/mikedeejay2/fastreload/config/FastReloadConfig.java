@@ -16,12 +16,13 @@ public class FastReloadConfig {
     private final List<ConfigVal<?>> configValues = new ArrayList<>();
     private final List<LoadListener> loadListeners = new ArrayList<>();
 
-    public final ConfigVal<Boolean> ONLY_PLUGINS        = new ConfigVal<>(c -> c.getBoolean("Only Plugins", true));
-    public final ConfigVal<Boolean> AUTO_RELOAD_PLUGINS = new ConfigVal<>(c -> c.getBoolean("Auto Reload Plugins", true));
-    public final ConfigVal<Integer> AUTO_RELOAD_TIME    = new ConfigVal<>(c -> c.getInt("Auto Reload Check Time", 20));
-    public final ConfigVal<Boolean> IN_CHAT_RELOAD      = new ConfigVal<>(c -> c.getBoolean("In Chat Reload", true));
-    public final ConfigVal<String> FILTER_MODE          = new ConfigVal<>(c -> c.getString("Reload Filter Mode", "Blacklist"));
-    public final ConfigVal<List<String>> FILTER_LIST    = new ConfigVal<>(c -> c.getStringList("Filter List"));
+    public final ConfigVal<Boolean>      ONLY_PLUGINS        = new ConfigVal<>(c -> c.getBoolean("Only Plugins", true));
+    public final ConfigVal<Boolean>      AUTO_RELOAD_PLUGINS = new ConfigVal<>(c -> c.getBoolean("Auto Reload Plugins", true));
+    public final ConfigVal<Integer>      AUTO_RELOAD_TIME    = new ConfigVal<>(c -> c.getInt("Auto Reload Check Time", 20));
+    public final ConfigVal<Double>       AUTO_RELOAD_WAIT    = new ConfigVal<>(c -> c.getDouble("Auto-Reload Wait Time", 1.0));
+    public final ConfigVal<Boolean>      IN_CHAT_RELOAD      = new ConfigVal<>(c -> c.getBoolean("In Chat Reload", true));
+    public final ConfigVal<String>       FILTER_MODE         = new ConfigVal<>(c -> c.getString("Reload Filter Mode", "Blacklist"));
+    public final ConfigVal<List<String>> FILTER_LIST         = new ConfigVal<>(c -> c.getStringList("Filter List"));
 
     public FastReloadConfig(FileConfiguration config) {
         this.config = config;

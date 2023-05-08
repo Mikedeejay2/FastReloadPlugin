@@ -3,6 +3,7 @@ In Chat Reload: true
 
 Auto Reload Plugins: true
 Auto Reload Check Time: 20
+Auto-Reload Wait Time: 1.0
 
 Reload Filter Mode: Blacklist
 Filter List:
