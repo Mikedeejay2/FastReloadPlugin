@@ -56,7 +56,7 @@ public class AutoReloaderRunnable implements Runnable {
             if(!lastModified.containsKey(pluginFile)) {
                 lastModified.put(pluginFile, modifiedDate);
                 // If the plugin is already loaded there's no need to load it again
-                if(pluginManager.isPluginEnabled(pluginName)) continue;
+                if(pluginManager.getPlugin(pluginName) != null) continue;
 
                 Bukkit.getScheduler().runTask(plugin, () -> autoLoadPlugin(pluginName));
             } else if(lastModified.get(pluginFile) != modifiedDate) { // If times don't match, reload
