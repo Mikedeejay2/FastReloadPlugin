@@ -5,13 +5,11 @@ import com.mikedeejay2.fastreload.commands.FastReloadCommand;
 import com.mikedeejay2.fastreload.config.FastReloadConfig;
 import com.mikedeejay2.fastreload.listeners.ChatListener;
 import com.mikedeejay2.fastreload.util.FieldsBase;
+import com.mikedeejay2.fastreload.util.ReflectUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Server;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandSender;
-import org.bukkit.command.ConsoleCommandSender;
-import org.bukkit.command.PluginCommand;
+import org.bukkit.command.*;
 import org.bukkit.permissions.Permission;
 import org.bukkit.plugin.*;
 import org.bukkit.scheduler.BukkitTask;
@@ -298,6 +296,11 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
         Plugin newPlugin = loadPlugin(pluginName);
         if(newPlugin == null) return;
         plugin.getServer().getPluginManager().enablePlugin(newPlugin);
+        try {
+            ReflectUtil.invokeMethod("syncCommands", plugin.getServer(), plugin.getServer().getClass(), new Class[0], new Object[0]);
+        } catch(NoSuchMethodException | InvocationTargetException | IllegalAccessException ex) {
+            plugin.getServer().getLogger().log(Level.SEVERE, "Could not sync commands for '" + plugin.getName() + "'", ex);
+        }
     }
 
     /**
