@@ -106,7 +106,7 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
                 fields.knownCommands().put(getFallback(plugin) + ":" + commandStr, command);
             }
         } catch(NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
-            e.printStackTrace();
+            plugin.getLogger().log(Level.SEVERE, "An error occurred while loading FastReload commands", e);
         }
     }
 
