@@ -424,9 +424,9 @@ public class ReloadSystem implements FastReloadConfig.LoadListener {
      * @param selectedPlugin The plugin to unregister commands from
      */
     protected void unregisterCommands(Plugin selectedPlugin) {
-        Set<Map.Entry<String, Command>> origSet = fields.knownCommands().entrySet();
-        for(Iterator<Map.Entry<String, Command>> i = origSet.iterator(); i.hasNext();) {
-            Command command = i.next().getValue();
+        Collection<Command> origSet = fields.knownCommands().values();
+        for(Iterator<Command> i = origSet.iterator(); i.hasNext();) {
+            Command command = i.next();
             if(!(command instanceof PluginCommand)) continue;
             PluginCommand pluginCommand = (PluginCommand) command;
             Plugin owningPlugin = pluginCommand.getPlugin();
